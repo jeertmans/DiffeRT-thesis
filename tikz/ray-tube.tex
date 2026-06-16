@@ -1,0 +1,71 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{3d}
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{decorations.markings}
+% \usetikzlibrary{patterns}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\hat{\bsup{#1}}}
+
+\begin{tikzpicture}[x=(10:1.0), y=(90:1.0), z=(-80:1.0)]
+  % Styles Definition
+  \tikzset{
+    mid arrow/.style={
+      decoration={
+        markings,
+        mark=at position #1 with {\arrow{>}}
+      },
+      postaction={decorate}
+    },
+    mid arrow/.default=0.5,
+    xyp/.style={canvas is xy plane at z=0, transform shape}
+  }
+
+  % Hatching for dSo Face
+  \pattern[pattern=north east lines, pattern color=black, even odd rule]
+  [draw,thick]
+  (0.2, 0.45) to[out=20, in=90] coordinate[pos=0.1] (A0) coordinate[pos=.6] (B0) (0.4, 0)
+  to[out=-90, in=0] coordinate[pos=.45] (C0) (0, -0.6)
+  to[out=180, in=-90] coordinate[pos=0.1] (D0) (-0.3, -0.1)
+  to[out=90, in=200] (0.2, 0.45);
+  \coordinate (Center0) at (0.05, -0.075);
+  \node[font=\footnotesize] at (-0.4, 0.6) {$dS_o$};
+
+  % Hatching for dS Face
+  \begin{scope}[shift={(4.0,0,0)},scale=1.5]
+    \pattern[pattern=north east lines, pattern color=black, even odd rule]
+    [draw,thick]
+    (0.2, 0.45) to[out=20, in=90] coordinate[pos=0.1] (A) coordinate[pos=.6] (B) (0.4, 0)
+    to[out=-90, in=0] coordinate[pos=.45] (C) (0, -0.6)
+    to[out=180, in=-90] coordinate[pos=0.1] (D) (-0.3, -0.1)
+    to[out=90, in=200] (0.2, 0.45);
+    \coordinate (Center) at (0.05, -0.075);
+    \node[font=\footnotesize] at (0.5, -0.7) {$dS$}; % Optional: Applied xyp here too
+  \end{scope}
+
+  % Draw external tube boundary lines (solid) with mid-arrows
+  \draw[thick, mid arrow=0.5] (A0) -- (A); % Top edge
+  \draw[dashed, thick, mid arrow=0.6] (B0) -- (B); % Upper internal
+  \draw[dashed, thick, mid arrow=0.6] (C0) -- (C);  % Lower internal
+  \draw[thick, mid arrow=0.5] (D0) -- (D); % Bottom edge
+
+  % Draw the axial ray (straight solid line) passing through the centers
+  \draw[->, mid arrow=0.4, thick] ($(Center0)!-0.4!(Center)$) -- ($(Center0)!1.2!(Center)$)
+  node[above right, font=\footnotesize] {$\uvec{s}$}
+  node[pos=0.12, align=center, sloped] {axial\\ray};
+
+  % Dimension Line and Projection Lines
+  \coordinate (S0) at ($(Center0) - (0,1.5,0)$);
+  \coordinate (SS) at ($(Center) - (0,1.5,0)$);
+  \draw[dashed, thick, opacity=0.5] (Center0) -- (S0);
+  \draw[dashed, thick, opacity=0.5] (Center) -- (SS);
+  \draw[<->,xyp] (S0) -- (SS)
+  node[midway, fill=white, font=\footnotesize] {$|s|$}
+  node[pos=0, below=3pt, font=\footnotesize,transform shape=false] {$s=0$}
+  node[pos=1, below=3pt, font=\footnotesize,transform shape=false] {$s=s$};
+
+  \draw ([yshift=+.08cm]S0) -- ([yshift=-.08cm]S0);
+  \draw ([yshift=+.08cm]SS) -- ([yshift=-.08cm]SS);
+
+\end{tikzpicture}

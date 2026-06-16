@@ -1,0 +1,191 @@
+% Requires:
+% \usepackage{siunitx}
+% \usepackage{pgfplots}
+% \usepackage{pgfplotstable}
+% \usetikzlibrary{calc}
+% \providecommand{\glsxtrshort}[1]{#1}
+% INCLUDE ../data/benchmarks/cpu_benchmarks_1.txt relto ../main.tex
+% INCLUDE ../data/benchmarks/cpu_benchmarks_2.txt relto ../main.tex
+% INCLUDE ../data/benchmarks/cpu_benchmarks_3.txt relto ../main.tex
+% INCLUDE ../data/benchmarks/gpu_benchmarks_1.txt relto ../main.tex
+% INCLUDE ../data/benchmarks/gpu_benchmarks_2.txt relto ../main.tex
+% INCLUDE ../data/benchmarks/gpu_benchmarks_3.txt relto ../main.tex
+\begin{tikzpicture}[every plot/.append style={mark repeat=5},every mark/.append style={opacity=0.7}]
+  \newcommand{\plotwidth}{4.85cm}
+  \newcommand{\plotheight}{4.4cm}
+  \newcommand{\xmode}{log} % linear or log
+  \pgfplotscreateplotcyclelist{custom cycle list}{
+    blue,every mark/.append style={fill=blue,draw=blue},mark=*\\
+    red,every mark/.append style={fill=red,draw=red},mark=square*\\
+    orange,every mark/.append style={fill=orange,draw=orange},mark=triangle*\\
+    green!80!black,every mark/.append style={fill=green!80!black,draw=green!80!black},mark=diamond*\\
+    mark=star\\
+  }
+  \pgfplotsset{every axis/.append style={scaled x ticks=false}}
+  \pgfplotsset{every x tick label/.append style={/pgf/number format/fixed}}
+  \pgfplotsset{every y tick label/.append style={/pgf/number format/fixed}}
+
+  % CPU time
+
+  \begin{axis}[
+      name=plot_order_1_cpu,
+      width=\plotwidth,
+      height=\plotheight,
+      ylabel={\glsxtrshort{cpu} time (\unit{\milli\second})},
+      title={$K=1$},
+      xtick pos=left,
+      xticklabels=\empty,
+      ymin=0.5e-1,ymax=2e3,
+      ymajorgrids=true,
+      xmode=\xmode,
+      ymode=log,
+      cycle list name=custom cycle list,
+      max space between ticks=25,
+    ]
+    \pgfplotstableread[col sep=comma]{data/benchmarks/cpu_benchmarks_1.txt}\mydata;
+    \addplot table [x=n,y expr=\thisrow{bs_1} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_10} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_100} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_1000} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{exhaustive} * 1000] {\mydata};
+  \end{axis}
+
+  \begin{axis}[
+      name=plot_order_2_cpu,
+      at={($ (.1cm,0cm) + (plot_order_1_cpu.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      title={$K=2$},
+      title style={name=title},
+      xtick pos=left,
+      xticklabels=\empty,
+      yticklabels=\empty,
+      ymin=0.5e-1,ymax=2e3,
+      ymajorgrids=true,
+      xmode=\xmode,
+      ymode=log,
+      cycle list name=custom cycle list,
+      max space between ticks=25,
+      legend style={font=\footnotesize, at={([yshift=1ex]title.north)},anchor=south,name=leg,nodes={anchor=base}},
+      legend columns=-1,legend style={column sep=1ex},
+      legend image post style={yshift=.5ex},
+      every legend to name picture/.style={
+        baseline={(leg.base)},
+      }
+    ]
+    \addlegendimage{blue,only marks,fill=blue!80!black,mark=*, opacity=0.7}
+    \addlegendimage{red,only marks,fill=red,mark=square*, opacity=0.7}
+    \addlegendimage{orange,only marks,fill=orange,mark=triangle*, opacity=0.7}
+    \addlegendimage{green!80!black,only marks,fill=green!80!black,mark=diamond*, opacity=0.7}
+    \addlegendimage{black,only marks,fill=black,mark=star, opacity=0.7}
+    \legend{$M=1$,$M=10$,$M=100$,$M=1000$,exhaustive}
+    \pgfplotstableread[col sep=comma]{data/benchmarks/cpu_benchmarks_2.txt}\mydata;
+    \addplot table [x=n,y expr=\thisrow{bs_1} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_10} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_100} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_1000} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{exhaustive} * 1000] {\mydata};
+  \end{axis}
+
+  \begin{axis}[
+      name=plot_order_3_cpu,
+      at={($ (.1cm,0cm) + (plot_order_2_cpu.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      title={$K=3$},
+      xtick pos=left,
+      xticklabels=\empty,
+      yticklabels=\empty,
+      ymin=0.5e-1,ymax=2e3,
+      ymajorgrids=true,
+      xmode=\xmode,
+      ymode=log,
+      cycle list name=custom cycle list,
+      max space between ticks=25,
+      set layers,
+    ]
+    \pgfplotstableread[col sep=comma]{data/benchmarks/cpu_benchmarks_3.txt}\mydata;
+    \addplot table [x=n,y expr=\thisrow{bs_1} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_10} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_100} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_1000} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{exhaustive} * 1000] {\mydata};
+    \begin{pgfonlayer}{axis foreground}
+      \draw[|<->|,dashed] (axis cs:9e1,7e0) -- (axis cs:9e1,1.5e3);
+      \node[anchor=north west,font=\scriptsize,fill=white,fill opacity=0.85,text opacity=1,inner sep=1pt] at (rel axis cs:0.03,0.95) {\shortstack{$\approx 100\times$ faster\\at $M=10$}};
+    \end{pgfonlayer}
+  \end{axis}
+
+  % GPU time
+
+  \begin{axis}[
+      name=plot_order_1_gpu,
+      anchor=north,
+      at={($ (0cm,-.3cm) + (plot_order_1_cpu.south) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      ylabel={\glsxtrshort{gpu} time (\unit{\milli\second})},
+      xtick pos=left,
+      x tick label style={/pgf/number format/fixed},
+      ymin=1e-1,ymax=5e1,
+      ymajorgrids=true,
+      xmode=\xmode,
+      ymode=log,
+      cycle list name=custom cycle list,
+    ]
+    \pgfplotstableread[col sep=comma]{data/benchmarks/gpu_benchmarks_1.txt}\mydata;
+    \addplot table [x=n,y expr=\thisrow{bs_1} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_10} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_100} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_1000} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{exhaustive} * 1000] {\mydata};
+  \end{axis}
+
+  \begin{axis}[
+      name=plot_order_2_gpu,
+      at={($ (.1cm,0cm) + (plot_order_1_gpu.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xlabel={Number of scene objects $N$},
+      xtick pos=left,
+      yticklabels=\empty,
+      ymin=1e-1,ymax=5e1,
+      ymajorgrids=true,
+      xmode=\xmode,
+      ymode=log,
+      cycle list name=custom cycle list,
+    ]
+    \pgfplotstableread[col sep=comma]{data/benchmarks/gpu_benchmarks_2.txt}\mydata;
+    \addplot table [x=n,y expr=\thisrow{bs_1} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_10} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_100} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_1000} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{exhaustive} * 1000] {\mydata};
+  \end{axis}
+
+  \begin{axis}[
+      name=plot_order_3_gpu,
+      at={($ (.1cm,0cm) + (plot_order_2_gpu.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xtick pos=left,
+      yticklabels=\empty,
+      ymin=1e-1,ymax=5e1,
+      ymajorgrids=true,
+      xmode=\xmode,
+      ymode=log,
+      cycle list name=custom cycle list,
+      set layers,
+    ]
+    \pgfplotstableread[col sep=comma]{data/benchmarks/gpu_benchmarks_3.txt}\mydata;
+    \addplot table [x=n,y expr=\thisrow{bs_1} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_10} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_100} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{bs_1000} * 1000] {\mydata};
+    \addplot table [x=n,y expr=\thisrow{exhaustive} * 1000] {\mydata};
+    \begin{pgfonlayer}{axis foreground}
+      \draw[|<->|,dashed] (axis cs:9e1,1.1e0) -- (axis cs:9e1,1.2e1);
+      \node[anchor=north west,font=\scriptsize,fill=white,fill opacity=0.85,text opacity=1,inner sep=1pt] at (rel axis cs:0.03,0.97) {\shortstack{$\approx 10\times$ faster\\at $M=10$}};
+    \end{pgfonlayer}
+  \end{axis}
+\end{tikzpicture}

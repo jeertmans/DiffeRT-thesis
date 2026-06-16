@@ -1,0 +1,85 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{siunitx}
+% \usepackage{pgfplots}
+% \usepackage{pgfplotstable}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{positioning}
+% \usetikzlibrary{shapes.arrows}
+% \pgfplotsset{compat=1.18}
+% INCLUDE ../data/three-scales.txt relto ../main.tex
+\begin{tikzpicture}
+  % Define common style for the plots to reduce repetition
+  \pgfplotsset{
+    base style/.style={
+      xtick={0, 2500, 5000, 7500, 10000},
+      xticklabels=\empty,
+      scaled x ticks=false,
+      x tick label/.append style={/pgf/number format/fixed},
+      xmin=0, xmax=10000,
+      width=4.5cm,
+      %    height=4.5cm,
+      %    scale only axis, % exact control over size
+      %    grid=major,
+      %    grid style={dashed, gray!30},
+      xlabel near ticks,
+      ylabel near ticks,
+      %    axis line style={black},
+      %    tick label style={font=\scriptsize},
+      %    label style={font=\small},
+    }
+  }
+
+  \pgfplotstableread[col sep=comma]{data/three-scales.txt}\mydata;
+
+  \begin{axis}[
+      name=total,
+      base style,
+      xlabel={Distance between antennas (\unit{\meter})},
+      ylabel={Received power (\unit{\dB})},
+      xticklabels={0,,\num{5000},,\num{10000}},
+    ]
+    \addplot[black, thin] table[x=distance, y=total] {\mydata};
+  \end{axis}
+  \node[anchor=south west,xshift=1pt,yshift=1pt,fill=white,fill opacity=0.8,inner sep=2pt,text opacity=1] at (total.south west) {Total signal};
+
+  \begin{axis}[
+      name=shadowing,
+      at={(total.north)},
+      anchor=south,
+      yshift=+1.5cm,
+      base style,
+    ]
+    \addplot[black, thin] table[x=distance, y=shadowing] {\mydata};
+  \end{axis}
+  \node[anchor=south west,xshift=1pt,yshift=1pt,fill=white,fill opacity=0.8,inner sep=2pt,text opacity=1] (shadowing_label) at (shadowing.south west) {Shadowing};
+
+  \begin{axis}[
+      name=path_loss,
+      at={(shadowing.west)},
+      anchor=east,
+      xshift=-.8cm,
+      base style,
+      ylabel={Received power (\unit{\dB})},
+    ]
+    \addplot[black, thick] table[x=distance, y=path_loss] {\mydata};
+  \end{axis}
+  \node[anchor=north west,xshift=1pt,yshift=1pt,fill=white,fill opacity=0.8,inner sep=2pt,text opacity=1] at (path_loss.south west |- shadowing_label.north) {Path loss};
+
+  \begin{axis}[
+      name=fast_fading,
+      at={(shadowing.east)},
+      anchor=west,
+      xshift=+.8cm,
+      base style,
+    ]
+    \addplot[black, ultra thin] table[x=distance, y=fast_fading] {\mydata};
+  \end{axis}
+  \node[anchor=south west,xshift=1pt,yshift=1pt,fill=white,fill opacity=0.8,inner sep=2pt,text opacity=1] at (fast_fading.south west) {Fast fading};
+
+  \path (shadowing.south) -- (total.north) node[midway,draw,circle,inner sep=1pt] (sum) {$\bsit{+}$};
+  \draw[->,thick] (shadowing.south) -- (sum);
+  \draw[->,thick] (sum) -- (total.north);
+  \draw[->,thick,rounded corners] (path_loss.south) |- (sum);
+  \draw[->,thick,rounded corners] (fast_fading.south) |- (sum);
+\end{tikzpicture}

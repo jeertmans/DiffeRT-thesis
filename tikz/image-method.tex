@@ -1,0 +1,66 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{intersections}
+% \usetikzlibrary{patterns.meta}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\glsxtrshort}[1]{#1}
+% \providecommand{\Glsxtrlong}[1]{#1}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+\begin{tikzpicture}[scale=.75]
+  \tikzset{point/.style={draw,cross out,thick,inner sep=2pt}}
+  \tikzstyle{ground}=[fill,draw=none,minimum width=0.3,minimum height=0.6]
+  \tikzstyle{image-line}=[->,densely dashdotted,gray, thick]
+  \tikzstyle{intersection-line}=[dotted,thick,draw opacity=0.75]
+  \tikzstyle{intersection-point}=[draw=blue,fill=white,fill opacity=0.5,circle,thick,inner sep=2pt]
+  \tikzstyle{valid-line}=[->,green!80!black,thick,draw opacity=0.75]
+  \draw[->,black,thick] (0,0) -- ++(.5,0) node[below] {$x$};
+  \draw[->,black,thick] (0,0) -- ++(0,.5) node[left] {$y$};
+  \node[anchor=north east] at (0,0) {$(0,0)$};
+
+  \node[point,label=below:{Transmitter},name=BS] (BS) at (2,-1) {};
+  \node[point,label=above:{Receiver},name=UE] (UE) at (2,4) {};
+
+  \node[right of=BS]{$(2, -1)$};
+  \node[left of=UE] {$(2, 4)$};
+
+  \node[point,draw opacity=0.75,label=above:{$\bsup{i}_1 = \bsup{i}_\text{\glsxtrshort{tx}}$},name=I1] (I1) at (-1,2) {};
+  \draw[image-line] (BS) -- (I1);
+  \node[point,draw opacity=0.75,label=above:{$\bsup{i}_2 = \bsup{i}_{\bsup{i}_\text{\glsxtrshort{tx}}}$},name=I2] (I2) at (11,2) {};
+  \draw[image-line] (I1) -- (I2);
+
+  \node[right of=I2] {$(11,2)$};
+  \node[left of=I1] {$(-1,2)$};
+
+  \draw[ground,pattern={Lines[angle=0]},rotate around={45:(0,0)}] (0,0) rectangle ({3.5/cos(45)}, .1);
+  \draw[name path=W1,red,thick] (0,0) -- (3.5,3.5);
+  \draw[ground,pattern={Lines[angle=45]}] (5,.5) rectangle (5.1, 4);
+  \draw[name path=W2,red,thick] (5,.5) -- (5,4);
+
+  \draw[intersection-line,name path=L1] (UE) -- (I2);
+  \path[name intersections={of=W2 and L1,by=PR1}];
+  \node[intersection-point] (R1) at (PR1) {};
+  \draw[intersection-line,name path=L2] (R1) -- (I1);
+  \path[name intersections={of=W1 and L2,by=PR2}];
+  \node[intersection-point] (R2) at (PR2) {};
+  \draw[intersection-line] (R2) -- (BS);
+  \draw[valid-line] (BS) -- (R2) -- (R1) -- (UE);
+
+  \pgfmathsetmacro{\shift}{0.0}
+  \pgfmathsetmacro{\dx}{0.2}
+  \pgfmathsetmacro{\stwo}{sqrt(2)*0.5}
+  \path[name path=L1] (BS) -- (I1);
+  \path[name intersections={of=W1 and L1,by=IM1}];
+  \draw[thick] ([shift={(\shift,0)}]IM1) -- ++ ({\dx*\stwo},-{\dx*\stwo}) -- ++(0,{2*\dx*\stwo}) -- cycle;
+  \path[name path=L2] (I1) -- (I2);
+  \path[name intersections={of=W2 and L2,by=IM2}];
+  \draw[thick] ([shift={(-{\stwo*\shift},{\stwo*\shift})}]IM2) -- ++ (-\dx,0) -- ++(\dx,\dx) -- cycle;
+
+  \begin{scope}[shift={(7,1,0)}]
+    \draw[image-line] (0,0) -- ++(1,0) node[right,black] {Image through mirror};
+    \draw[intersection-line] (0,-.5) -- ++(1,0) node[right,black] {Intersection path};
+    \draw[valid-line] (0,-1) -- ++(1,0) node[right,black] {Final path};
+    \draw[ground,pattern={Lines[angle=45]}] (0, -1.5) rectangle ++(1,-.1);
+    \draw[red,thick] (0,-1.5) -- ++(1,0) node[right,black] {Mirror};
+    \path (0,-2) -- ++(1,0) node[right] {Interaction point} node[midway,intersection-point] {};
+  \end{scope}
+\end{tikzpicture}

@@ -1,0 +1,165 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usetikzlibrary{calc}
+% INCLUDE ../data/eval-sampling-objects/trained_canyon_False_floor_False_eval_same.txt relto ../main.tex
+% INCLUDE ../data/eval-sampling-objects/trained_canyon_True_floor_False_eval_same.txt relto ../main.tex
+% INCLUDE ../data/eval-sampling-objects/trained_canyon_False_floor_True_eval_same.txt relto ../main.tex
+% INCLUDE ../data/eval-sampling-objects/trained_canyon_True_floor_True_eval_same.txt relto ../main.tex
+% INCLUDE ../data/eval-sampling-objects/trained_canyon_False_floor_False_eval_whole.txt relto ../main.tex
+% INCLUDE ../data/eval-sampling-objects/trained_canyon_True_floor_False_eval_whole.txt relto ../main.tex
+% INCLUDE ../data/eval-sampling-objects/trained_canyon_False_floor_True_eval_whole.txt relto ../main.tex
+% INCLUDE ../data/eval-sampling-objects/trained_canyon_True_floor_True_eval_whole.txt relto ../main.tex
+\begin{tikzpicture}[every axis/.append style={xmode=log},every plot/.append style={mark repeat=3},every mark/.append style={opacity=0.7}]
+  \newcommand{\plotwidth}{4.4cm}
+  \newcommand{\plotheight}{4cm}
+  \pgfplotscreateplotcyclelist{custom color cycle}{
+    blue,every mark/.append style={fill=blue,draw=blue},mark=*\\
+    red,every mark/.append style={fill=red,draw=red},mark=square*\\
+    orange,every mark/.append style={fill=orange,draw=orange},mark=triangle*\\
+    green!80!black,every mark/.append style={fill=green!80!black,draw=green!80!black},mark=diamond*\\
+  }
+  \pgfplotsset{every axis/.append style={scaled x ticks=false}}
+  \pgfplotsset{every x tick label/.append style={/pgf/number format/fixed,font=\footnotesize}}
+  \pgfplotsset{every y tick label/.append style={/pgf/number format/fixed,font=\footnotesize}}
+
+  % Hit rate (same sampling region)
+
+  \begin{axis}[
+      name=plot_order_1_same,
+      width=\plotwidth,
+      height=\plotheight,
+      ylabel={Hit rate (\%)},
+      title={$K=1$},
+      xtick pos=left,
+      xmode=log,
+      xtick={1, 10, 100, 1000},
+      xticklabels=\empty,
+      ymin=0,ymax=100,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x=M,y expr=\thisrow{order_1}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_False_eval_same.txt};
+    \addplot table [x=M,y expr=\thisrow{order_1}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_False_eval_same.txt};
+    \addplot table [x=M,y expr=\thisrow{order_1}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_True_eval_same.txt};
+    \addplot table [x=M,y expr=\thisrow{order_1}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_True_eval_same.txt};
+  \end{axis}
+
+  \begin{axis}[
+      name=plot_order_2_same,
+      at={($ (.1cm,0cm) + (plot_order_1_same.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      title={$K=2$},
+      title style={name=title},
+      xtick pos=left,
+      xtick={1, 10, 100, 1000},
+      xticklabels=\empty,
+      yticklabels=\empty,
+      ymin=0,ymax=100,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+      legend style={font=\footnotesize, at={([yshift=1ex]title.north)},anchor=south,name=leg,nodes={anchor=base}},
+      legend columns=-1,legend style={column sep=1ex},
+      legend image post style={yshift=.5ex},
+      every legend to name picture/.style={
+        baseline={(leg.base)},
+      }
+    ]
+    \addlegendimage{blue,only marks,fill=blue!80!black,mark=*, opacity=0.7}
+    \addlegendimage{red,only marks,fill=red,mark=square*, opacity=0.7}
+    \addlegendimage{orange,only marks,fill=orange,mark=triangle*, opacity=0.7}
+    \addlegendimage{green!80!black,only marks,fill=green!80!black,mark=diamond*, opacity=0.7}
+    \legend{\glsxtrfull{co},\glsxtrshort{co} + \glsxtrfull{og},\glsxtrfull{ws},\glsxtrshort{ws}+\glsxtrshort{og}}
+    \addplot table [x=M,y expr=\thisrow{order_2}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_False_eval_same.txt};
+    \addplot table [x=M,y expr=\thisrow{order_2}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_False_eval_same.txt};
+    \addplot table [x=M,y expr=\thisrow{order_2}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_True_eval_same.txt};
+    \addplot table [x=M,y expr=\thisrow{order_2}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_True_eval_same.txt};
+  \end{axis}
+
+  \begin{axis}[
+      name=plot_order_3_same,
+      at={($ (.1cm,0cm) + (plot_order_2_same.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      title={$K=3$},
+      xtick pos=left,
+      xtick={1, 10, 100, 1000},
+      xticklabels=\empty,
+      yticklabels=\empty,
+      ymin=0,ymax=100,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x=M,y expr=\thisrow{order_3}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_False_eval_same.txt};
+    \addplot table [x=M,y expr=\thisrow{order_3}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_False_eval_same.txt};
+    \addplot table [x=M,y expr=\thisrow{order_3}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_True_eval_same.txt};
+    \addplot table [x=M,y expr=\thisrow{order_3}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_True_eval_same.txt};
+  \end{axis}
+
+  % Hit rate (whole sampling region)
+
+  \begin{axis}[
+      name=plot_order_1_whole,
+      anchor=north,
+      at={($ (0cm,-.3cm) + (plot_order_1_same.south) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      ylabel={Hit rate (\%)},
+      xtick pos=left,
+      xtick={1, 10, 100, 1000},
+      xticklabels={1, 10, 100, 1000},
+      x tick label style={/pgf/number format/fixed},
+      ymin=0,ymax=100,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x=M,y expr=\thisrow{order_1}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_False_eval_whole.txt};
+    \addplot table [x=M,y expr=\thisrow{order_1}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_False_eval_whole.txt};
+    \addplot table [x=M,y expr=\thisrow{order_1}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_True_eval_whole.txt};
+    \addplot table [x=M,y expr=\thisrow{order_1}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_True_eval_whole.txt};
+  \end{axis}
+
+  \begin{axis}[
+      name=plot_order_2_whole,
+      at={($ (.1cm,0cm) + (plot_order_1_whole.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xlabel={Number of samples $M$},
+      xtick pos=left,
+      xtick={1, 10, 100, 1000},
+      xticklabels={1, 10, 100, 1000},
+      yticklabels=\empty,
+      ymin=0,ymax=100,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x=M,y expr=\thisrow{order_2}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_False_eval_whole.txt};
+    \addplot table [x=M,y expr=\thisrow{order_2}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_False_eval_whole.txt};
+    \addplot table [x=M,y expr=\thisrow{order_2}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_True_eval_whole.txt};
+    \addplot table [x=M,y expr=\thisrow{order_2}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_True_eval_whole.txt};
+  \end{axis}
+
+  \begin{axis}[
+      name=plot_order_3_whole,
+      at={($ (.1cm,0cm) + (plot_order_2_whole.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xtick pos=left,
+      xtick={1, 10, 100, 1000},
+      xticklabels={1, 10, 100, 1000},
+      yticklabels=\empty,
+      ymin=0,ymax=100,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x=M,y expr=\thisrow{order_3}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_False_eval_whole.txt};
+    \addplot table [x=M,y expr=\thisrow{order_3}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_False_eval_whole.txt};
+    \addplot table [x=M,y expr=\thisrow{order_3}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_False_floor_True_eval_whole.txt};
+    \addplot table [x=M,y expr=\thisrow{order_3}*100,col sep=comma] {data/eval-sampling-objects/trained_canyon_True_floor_True_eval_whole.txt};
+  \end{axis}
+
+  \draw[-,thick] (plot_order_3_same.east) -- ++(.4,0) node[rotate=90,draw,anchor=north,align=center,font=\footnotesize] (label_same) {Evaluated on same\\sampling region as\\used for training};
+
+  \node[thick,rotate=90,draw,align=center,font=\footnotesize] (label_whole) at (label_same |- plot_order_3_whole.east) {Evaluated on the\\whole scene};
+  \draw[-,thick] (plot_order_3_whole.east) -- (label_whole);
+\end{tikzpicture}

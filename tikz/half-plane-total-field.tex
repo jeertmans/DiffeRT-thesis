@@ -1,0 +1,35 @@
+% Requires:
+% \providecommand{\glsxtrshort}[1]{#1}
+\begin{tikzpicture}[scale=1.5, >=stealth]
+  % Origin / Edge
+  \coordinate (O) at (0,0);
+
+  % Half-Plane Screen
+  \draw[ultra thick, fill=black] (0,0) -- (4,0) node[pos=0.8, below] {Half-plane screen ($n=2$)};
+  \fill (O) circle (1.5pt) node[below left] {Edge};
+
+  % Incident Rays
+  \def\incAngle{120}
+  \foreach \i in {1,2,3} {
+    \draw[thick, ->, blue] ({-\i*cos(180-\incAngle)-2}, {\i*sin(180-\incAngle)+1.5}) -- ++({2*cos(360-\incAngle)}, {-2*sin(360-\incAngle)}) node[pos=0.2, above left] {\ifnum\i=2 Incident rays\fi};
+  }
+  % Ray to origin
+  \draw[thick, ->, blue] ({-2*cos(180-\incAngle)}, {2*sin(180-\incAngle)}) -- (0,0);
+
+  % Incident Shadow Boundary (ISB)
+  \draw[thick, dashed, blue] (0,0) -- ({3*cos(360-\incAngle)}, {-3*sin(360-\incAngle)}) node[below right] {\glsxtrshort{isb}};
+
+  % Reflection Shadow Boundary
+  \draw[thick, dashed, red] (0,0) -- ({3*cos(\incAngle)}, {3*sin(\incAngle)}) node[above left] {\glsxtrshort{rsb}};
+
+  % Regions
+  \node[align=center] at (1.5, 2.5) {Region I\\ Incident + Reflected\\ + Diffracted};
+  \node[align=center] at (-2, 0.5) {Region II\\ Incident + Diffracted};
+  \node[align=center] at (1.5, -1.5) {Region III\\ Diffracted only};
+
+  % Diffracted Rays
+  \foreach \a in {30, 60, 90, 150, 180, 210, 240, 270, 300, 330} {
+    \draw[->, dotted, thick, darkgray] (0,0) -- ({\a}:1.5);
+  }
+  \node[align=center, darkgray] at (-1.5, -2) {Diffracted rays};
+\end{tikzpicture}

@@ -1,0 +1,34 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{pgfplotstable}
+% \usepackage{siunitx}
+% \pgfplotsset{compat=1.18}
+% INCLUDE ../data/transition-function.txt relto ../main.tex
+\begin{tikzpicture}
+  \pgfplotsset{
+    set layers,
+    every axis/.append style={
+      width=8cm,
+      xmode=log,
+      xmin=1e-3, xmax=10,
+    }
+  }
+
+  \begin{axis}[
+      axis y line*=left,
+      xlabel={Argument $x$},
+      ylabel={Magnitude - solid line},
+      %ymin=0, ymax=1.05,
+    ]
+    \addplot[solid, thick] table[x=x, y=magnitude, col sep=comma] {data/transition-function.txt};
+  \end{axis}
+
+  \begin{axis}[
+      axis y line*=right,
+      axis x line=none,
+      ylabel={Phase (\unit{\degree}) - dashed line},
+      %ymin=0, ymax=47,
+    ]
+    \addplot[dashed, thick] table[x=x, y=phase, col sep=comma] {data/transition-function.txt};
+  \end{axis}
+\end{tikzpicture}

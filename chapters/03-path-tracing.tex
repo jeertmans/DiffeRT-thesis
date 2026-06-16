@@ -1,0 +1,454 @@
+\chapter{How To Trace Paths}\labch{path-tracing}
+
+Building on the theoretical foundations established in the previous chapters, we now turn our attention to the practical implementation of ray tracing algorithms. While \refch{rt-fundamentals} provided the mathematical framework based on geometric optics, this chapter focuses on computational techniques for tracing ray paths through complex environments.
+
+In this book, we categorize path tracing algorithms into two main approaches: exact and inexact methods. Exact methods, such as the image method, determine the precise coordinates of a ray path connecting two communicating nodes (e.g., a source and a receiver) for a prescribed sequence of interactions, such as specular reflections. In contrast, inexact methods seek approximations and often trade geometric precision for computational speed.
+
+Both exact and inexact methods rely on the geometrical optics principles discussed in \refch{rt-fundamentals}. They typically assume that the \gls{wavelength} of radio waves is much smaller than the objects in the environment. Under this assumption, propagation is modeled as rays traveling in straight lines and interacting with surfaces through reflection, refraction, and diffraction. Fermat's principle underlies all methods presented in this chapter and provides the governing physical law for ray trajectories.
+
+\section{Exact Methods}
+
+All exact methods address the same geometric task: given a transmitter, a receiver, and an ordered interaction sequence
+\begin{equation}
+  \bsit{I} = \left[I_1, I_2, \ldots, I_{K}\right],
+\end{equation}
+where $I_k$ represents the $k$-th interaction (e.g., a reflection on a specific wall), find the corresponding ray path(s), if any, that satisfy the physical interaction laws in that exact order. We call such an ordered sequence a \emph{path candidate}. Depending on the geometry and interaction types, one path candidate may produce no valid path, one valid path, or multiple valid paths.
+
+In this chapter, we focus on solving the \emph{exact-coordinate problem} for a given path candidate. Methods for generating path candidates efficiently are discussed later in \refch{efficient-path-tracing}, and a practical walkthrough is provided in \refappendix{tutorial}. For example, if the path candidate is a double reflection (wall then floor), an exact method computes the precise interaction coordinates that realize this sequence (see \reffig{exact-path-problem}).
+
+\begin{figure}
+  \inputtikz{exact-path-problem}
+  \caption{Illustration of the exact path problem for a double-reflection case: how to find the exact path coordinates of a ray joining a transmitter and a receiver while undergoing a specular reflection on the first wall (mirror) and then on the second wall?}
+  \labfig{exact-path-problem}
+\end{figure}
+
+\subsection{The \texorpdfstring{\glsentrytitlecase{im}{long}}{Image Method}}\labsec{image-method}
+
+\begin{figure}
+  \inputtikz{image-source-method}
+  \caption{Illustration of the image-source method for a single reflection. The virtual source is the mirror image of the actual source across the reflecting surface. The path from the source to the receiver via the reflection point is equivalent to the direct path from the image source to the receiver.}
+  \labfig{image-source-method}
+\end{figure}
+
+Although distinct from the \enquote{method of images} used to solve boundary-value problems in differential equations, the image method in ray tracing shares a conceptual and historical lineage with this earlier technique. In the method of images, the goal is to replace boundary conditions with image sources. In path tracing, boundaries are planar reflectors, such as walls. The reflected ray path is obtained by first computing the image of the source (transmitter) with respect to the reflector, and then determining the intersection between the reflector and the line segment connecting the image and the receiver. This intersection point corresponds exactly to the specular reflection point on the surface, and the ray path can thus be traced (see \reffig{image-source-method}). In its modern form, the method was introduced for rectangular room-acoustics simulation by Allen and Berkley~\sidecite{Allen1979} and later extended to arbitrary polyhedra by Borish~\sidecite{Borish1984}. The same geometric principle was subsequently adopted for deterministic radio-network design in site-specific propagation studies.
+
+\subsubsection{Mathematical Formulation}
+
+The image method determines the exact paths between a \glsxtrfull{tx} and a \glsxtrfull{rx}, with a certain number $K$ of specular reflections, by computing the successive images of \gls{tx} using orthogonal symmetry across the surfaces. As illustrated in \reffig{image-method}, all images are first computed successively across each surface: the image of \gls{tx} across the first surface is computed, then the image of this image across the second surface, and so on until the last surface is reached.
+
+This \emph{forward} procedure is defined by
+\begin{equation}
+  \bsup{i}_k = \bsup{i}_{k-1} - 2\left[\left(\bsup{i}_{k-1} - \bsup{p}_k\right)\cdot\uvec{n}_k\right]\uvec{n}_k,
+\end{equation}
+where $\bsup{i}_k$ and $\bsup{p}_k$ are, respectively, the $k$-th image and any point on the $k$-th surface, and $\bsup{i}_0$ is the location of \gls{tx}.
+
+Subsequently, the exact interaction coordinates are derived via a recursive backward pass, from \gls{rx} to \gls{tx}, by intersecting each surface with the line joining the subsequent interaction point (or \gls{rx}) and the corresponding image. This \emph{backward} step is defined by
+\begin{equation}
+  \bsup{x}_k = \bsup{x}_{k+1} + \frac{\left(\bsup{p}_k - \bsup{x}_{k+1}\right)\cdot\uvec{n}_k}{\left(\bsup{x}_{k+1} - \bsup{i}_k\right)\cdot\uvec{n}_k} (\bsup{x}_{k+1} - \bsup{i}_k),
+\end{equation}
+where $\bsup{x}_k$ is the interaction point on the $k$-th surface, $\bsup{x}_0$ is the location of \gls{tx}, and $\bsup{x}_{K+1}$ is the location of \gls{rx}.
+
+This expression follows from a standard line--plane intersection by parameterizing the line from $\bsup{x}_{k+1}$ toward $\bsup{i}_k$ as
+\begin{equation}
+  \bsup{x}(t)=\bsup{x}_{k+1}+t(\bsup{x}_{k+1}-\bsup{i}_k),
+\end{equation}
+and enforcing the plane constraint $(\bsup{x}(t)-\bsup{p}_k)\cdot\uvec{n}_k=0$.
+
+From these formulas, the connection to Fermat's principle is not immediate. However, one can verify \emph{a posteriori} that the traced ray path satisfies the law of reflection.
+
+For specular reflections on planar surfaces, the image method is among the most computationally efficient approaches, as it requires a number of operations that is linear in the number of interactions.
+
+\begin{figure*}
+  \inputtikz{image-method}
+  \caption{Example application of the image method to the double-reflection scenario illustrated in \reffig{exact-path-problem}. The method determines the only valid path joining \gls{tx} and \gls{rx} through two successive specular reflections (the interaction order matters). First, the successive images of \gls{tx} are computed across each mirror using orthogonal symmetry. Second, the intersection points with the mirrors are computed backward---from the last mirror to the first---by connecting \gls{rx}, and then each successive intersection point, to the corresponding image of \gls{tx}. Finally, the valid path is assembled by joining \gls{tx}, the intermediate intersection points, and \gls{rx}.}
+  \labfig{image-method}
+\end{figure*}
+
+\subsubsection{Extension to Arbitrary Geometries and Interactions}
+
+Although the above algorithm is strictly formulated for specular reflections on planar surfaces, the guiding principle of the image method---constructing a sequence of virtual sources that satisfies boundary conditions---can be generalized to reflections, diffractions, or other interactions on non-planar objects. In practice, dedicated formulations are required for these cases, and they generally support only one diffraction, located either at the first or at the last interaction~\sidecite{Quatresooz2021}. As geometries become curved or interactions such as edge diffraction are introduced, the analytical construction of these virtual sources becomes significantly more complex because the virtual loci are no longer points, but curves or surfaces~\sidecite{AguadoAgelet2000}. This limitation motivates the alternative formulations discussed next.
+
+\subsection{\texorpdfstring{\glsentrytitlecase{mpt}{long}}{Min-Path-Tracing}}\labsec{mpt}
+
+\begin{figure*}
+  \inputtikz{min-path-tracing}
+  \caption{Example application of the \glsxtrshort{mpt} method to a complex scenario comprising, in order: a reflection on a sphere, a diffraction on a straight edge, a double reflection (first on a plane, then on a sphere), and finally a diffraction on a helicoidal edge. A 2D top-down view of the same scenario is provided in \reffig{min-path-tracing-top-down}.}
+  \labfig{min-path-tracing}
+\end{figure*}
+
+\begin{figure*}
+  \inputtikz{min-path-tracing-top-down}
+  \caption{2D top-down view of the 3D scenario illustrated in \reffig{min-path-tracing}. The equality between incidence and reflection angles on the plane and spheres is visually apparent. For edge diffraction, the equality of angles between incoming and outgoing rays and the edge direction vector is less evident because both edge direction vectors have a non-zero $z$-component.}
+  \labfig{min-path-tracing-top-down}
+\end{figure*}
+
+The \gls{mpt} method is a deterministic, minimization-based path-finding approach developed to address the limitations of the image method for complex interaction chains and non-planar geometries~\sidecite{Eertmans2023EuCAP}. While the image method is highly efficient for specular reflections on planar surfaces, it does not handle diffraction in its usual form and becomes mathematically cumbersome for curved surfaces. \Gls{mpt} formulates exact coordinate recovery for a given path candidate as a non-linear optimization problem. Importantly, this optimization view is not limited to reflections and diffractions. It can incorporate refraction constraints as additional interaction laws, and it is also well-suited to modeling programmable interactions such as \gls{ris} through interaction terms that encode generalized reflection or refraction behavior.
+
+\subsubsection{Problem Formulation}
+
+The fundamental principle underlying \gls{mpt} is to formulate path tracing as the minimization of a cost function $C$ that quantifies the violation of physical interaction laws and object-membership constraints. The method iteratively adjusts the unknown interaction coordinates to minimize this cost, effectively searching for a configuration that simultaneously satisfies all physical laws.
+
+In 3D, the unknown interaction coordinates can be collected into a single matrix $\bsit{X}$ of size $K\times 3$, where $K$ is the number of interactions in the path candidate. The goal is to find the optimal $\bsit{X}^\star$ that minimizes the cost function $C(\bsit{X})$, i.e.,
+\begin{equation}
+  \bsit{X}^\star = \argmin_{\bsit{X}\, \in\, \mathbb{R}^{K\times 3}} C(\bsit{X}),
+\end{equation}
+and to verify that $C(\bsit{X}^\star)$ approaches zero to ensure that the solution is physically valid.
+
+Although one could use a root-finding algorithm to solve $C(\bsit{X})=0$ directly, a minimization approach is generally more robust because it handles cases in which constraints cannot be satisfied exactly due to numerical effects or modeling approximations. Minimizing $C$ therefore yields the best admissible solution even when an exact solution does not exist.
+
+For each interaction index $k$, \gls{mpt} defines two complementary cost terms:
+\begin{enumerate}
+  \item An \emph{interaction} term $C_k^{\mathrm{int}}$, enforcing the local physical law (specular reflection or edge diffraction) between $(\bsup{x}_{k-1}, \bsup{x}_k, \bsup{x}_{k+1})$.
+  \item An \emph{object-belonging} term $C_k^{\mathrm{obj}}$, enforcing that $\bsup{x}_k$ lies on the object designated by interaction $I_k$.
+\end{enumerate}
+
+The global objective is then built as the sum of the squared $\ell^2$-norms of the vectors of these local penalties over all interactions
+\begin{equation}
+  C(\bsit{X}) = \underbrace{\|\bsit{c}^{\mathrm{int}}(\bsit{X})\|^2}_{C^{\mathrm{int}}} + \underbrace{\|\bsit{c}^{\mathrm{obj}}(\bsit{X}) \|^2}_{C^{\mathrm{obj}}},
+\end{equation}
+where $\bsit{c}^{\mathrm{int}}(\bsit{X})$ and $\bsit{c}^{\mathrm{obj}}(\bsit{X})$ are the vectors of interaction and object-belonging costs, respectively, and are given by
+\begin{widealign}
+  \bsit{c}^{\mathrm{int}}(\bsit{X}) &=
+  \begin{bmatrix}c_1^{\mathrm{int}}(\bsup{x}_0, \bsup{x}_1, \bsup{x}_2) & \ldots & c_{K}^{\mathrm{int}}(\bsup{x}_{K-1}, \bsup{x}_K, \bsup{x}_{K+1})
+  \end{bmatrix}^\top, \label{eq:cost-vector-int} \\
+  \bsit{c}^{\mathrm{obj}}(\bsit{X}) &=
+  \begin{bmatrix}c_1^{\mathrm{obj}}(\bsup{x}_1) & \ldots & c_{K}^{\mathrm{obj}}(\bsup{x}_K)
+  \end{bmatrix}^\top.\label{eq:cost-vector-obj}
+\end{widealign}
+
+The individual cost terms $c_k^{\mathrm{int}}$ and $c_k^{\mathrm{obj}}$ are not necessarily scalar: they can be vector-valued to capture multiple constraints simultaneously, hence the use of bold notation. In \eqref{eq:cost-vector-int} and \eqref{eq:cost-vector-obj}, the total cost vectors are formed by concatenating all individual cost vectors. \Cref{fig:min-path-tracing-i-function,fig:min-path-tracing-f-function} illustrate the interaction and object-belonging cost functions for a single reflection, respectively.
+
+\paragraph{Specular Reflection}
+
+For a specular reflection at a point $\bsup{x}_k$ on a surface with local normal vector $\uvec{n}_k$, the incoming incident vector $\bsup{s}^i$ and the outgoing reflected vector $\bsup{s}^r$ must satisfy the law of reflection, meaning they make the same angle with the normal,
+\begin{equation}
+  \uvec{s}^r = \uvec{s}^i - 2 \left(\uvec{s}^i \cdot \uvec{n}_k\right)\uvec{n}_k.
+\end{equation}
+
+If an implicit equation $f_k(\bsup{x})=0$ is known, the normal vector is readily obtained by normalizing the gradient of the surface function, i.e., $\uvec{n}_k = \tfrac{\nabla f_k}{\|\nabla f_k\|}$. To circumvent some numerical singularities that optimization routines can encounter when normalizing vectors of unknown sizes, \gls{mpt} relaxes the strict unit-norm requirement on the reflected vector by rescaling the relationship with $\gamma_k = \tfrac{\|\bsup{s}^i\|}{\|\bsup{s}^r\|}$, yielding
+\begin{equation}\label{eq:mpt-reflection}
+  \gamma_k \cdot \bsup{s}^r = \bsup{s}^i - 2 \left(\bsup{s}^i \cdot \uvec{n}_k\right)\uvec{n}_k.
+\end{equation}
+
+By equating \eqref{eq:mpt-reflection} to zero, the residual interaction cost for a reflection is then defined as
+\begin{equation}
+  \begin{split}
+    \bsup{c}_k^{\mathrm{int}}(\bsup{x}_{k-1}, \bsup{x}_k, \bsup{x}_{k+1}) &= \gamma_k \left(\bsup{x}_{k+1} - \bsup{x}_k\right)\\
+    &-\left(\bsup{x}_k - \bsup{x}_{k-1}\right)\\
+    &+ 2 \left(\left(\bsup{x}_k - \bsup{x}_{k-1}\right) \cdot \uvec{n}_k\right)\uvec{n}_k,
+  \end{split}
+\end{equation}
+and the residual object-belonging cost is defined as
+\begin{equation}
+  c_k^{\mathrm{obj}}(\bsup{x}_k) = f_k(\bsup{x}_k).
+\end{equation}
+
+\begin{figure*}
+  \inputtikz{min-path-tracing-i-function}
+  \caption{Illustration of the residual interaction-based function $C^\mathrm{int}$ for a single reflection.}
+  \labfig{min-path-tracing-i-function}
+\end{figure*}
+
+\begin{figure*}
+  \inputtikz{min-path-tracing-f-function}
+  \caption{Illustration of the residual object-belonging function $C^\mathrm{obj}$ for a single reflection.}
+  \labfig{min-path-tracing-f-function}
+\end{figure*}
+
+\paragraph{Edge Diffraction}
+
+Similar to the reflection case, the interaction cost for edge diffraction is derived from the vector form of the geometrical theory of diffraction. An incident vector $\bsup{s}^i$ striking an edge with local direction vector $\uvec{e}_k$ diffracts into a cone of rays $\bsup{s}^d$. The incident and diffracted vectors must form the same angle with the edge and are thus related by
+\begin{equation}
+  \frac{\bsup{s}^i \cdot \uvec{e}_k}{\| \bsup{s}^i \|} =  \frac{\bsup{s}^d \cdot \uvec{e}_k}{\|\bsup{s}^d\|}.
+\end{equation}
+
+For a parametrically defined edge $\bsup{e}_k(s)$, its direction vector is obtained as $\uvec{e}_k = \tfrac{\mathrm{d}\bsup{e}_k}{\mathrm{d}s}$.
+
+By defining the departure point from the previous interaction as $\bsup{x}_{k-1}$ and the arrival point at the next interaction as $\bsup{x}_{k+1}$ (with $\bsup{x}_0$ and $\bsup{x}_{K+1}$ being \gls{tx} and \gls{rx}, respectively), \gls{mpt} forms residuals for each interaction triplet $(\bsup{x}_{k-1}, \bsup{x}_k, \bsup{x}_{k+1})$ as
+\begin{equation}
+  \begin{split}
+    c_k^{\mathrm{int}}(\bsup{x}_{k-1}, \bsup{x}_k, \bsup{x}_{k+1}) &=
+    \frac{\left(\bsup{x}_{k} - \bsup{x}_{k-1}\right) \cdot \uvec{e}_k}{\| \bsup{x}_{k} - \bsup{x}_{k-1} \|} \\
+    &-\frac{\left(\bsup{x}_{k+1} - \bsup{x}_k\right) \cdot \uvec{e}_k}{\|\bsup{x}_{k+1} - \bsup{x}_k \|},
+  \end{split}
+\end{equation}
+and the residual object-belonging cost is defined as
+\begin{equation}
+  c_k^{\mathrm{obj}}(\bsup{x}_k) = f_k(\bsup{x}_k),
+\end{equation}
+where $f_k(\bsup{x}_k)=0$ is an implicit equation of the edge. Note that the interaction cost for edge diffraction is scalar, as it only captures a single constraint, while the interaction cost for reflection is vector-valued, as it captures three constraints (one per coordinate).
+
+\subsubsection{Modeling Other Interactions}
+
+The \gls{mpt} framework is flexible and can be extended to model other types of interactions beyond specular reflection and edge diffraction. For example, refraction can be modeled by defining an interaction cost based on Snell's law, which relates the angles of incidence and refraction to the refractive indices of the media. Similarly, programmable interactions such as those involving \gls{ris} can be modeled by defining custom interaction costs that capture the desired reflection or refraction behavior. The key advantage of the \gls{mpt} approach is that it provides a unified optimization framework that can accommodate a wide variety of interaction types and geometries, making it a powerful tool for path tracing in complex environments.
+
+\subsubsection{Parametric Reduction}
+
+Optimization in $\mathbb{R}^{K \times 3}$ entails estimating three coordinates per interaction point while simultaneously satisfying the interaction term $C^{\mathrm{int}}$ and the object-belonging term $C^{\mathrm{obj}}$. However, when a parametric mapping is available for the interacting objects, the optimization can be significantly simplified. Expressing the problem in the parametric space not only reduces the dimensionality but also eliminates the $C^{\mathrm{obj}}$ term, which is then implicitly satisfied. By establishing parametric--Cartesian mapping functions
+\begin{align}
+  (s_k, t_k) &\leftrightarrow (x_k, y_k, z_k) \quad &\text{for surfaces}, \\
+  (s_k) &\leftrightarrow (x_k, y_k, z_k) \quad &\text{for edges},
+\end{align}
+where the parameters represent 2D coordinates for surfaces and 1D coordinates for edges, the object-belonging constraint is always satisfied by construction, since any parametric coordinate maps to a point on the object. Consequently, the dimensionality drops from $3K$ to $2K_r + K_d$, where $K_r$ is the number of surface parameters and $K_d$ is the number of edge parameters. The objective then simplifies to minimizing the interaction residual vector
+\begin{equation}\label{eq:mpt-min-param}
+  \underset{\bsit{t}\,\in\,\mathbb{R}^{2K_r + K_d}}{\text{minimize}} \left\|\bsup{c}^\mathrm{int}\left(\bsit{\mathcal{X}}(\bsit{t})\right)\right\|^2,
+\end{equation}
+where $\bsit{\mathcal{X}}(\bsit{t})$ is the parametric-to-Cartesian coordinate mapping, and $\bsit{t}$ is the vector of parametric coordinates.
+
+\subsubsection{Numerical Considerations}
+
+\begin{figure*}
+  \centering
+  \begin{subfigure}[b]{0.49\contentwidth}
+    \centering
+    \inputtikz{min-path-tracing-iterations-1}
+    \caption{Random initialization.}
+    \labfig{min-path-tracing-iterations-1}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.49\contentwidth}
+    \centering
+    \inputtikz{min-path-tracing-iterations-2}
+    \caption{After the first iteration.}
+    \labfig{min-path-tracing-iterations-2}
+  \end{subfigure}
+
+  \begin{subfigure}[b]{0.49\contentwidth}
+    \centering
+    \inputtikz{min-path-tracing-iterations-3}
+    \caption{After the second iteration.}
+    \labfig{min-path-tracing-iterations-3}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.49\contentwidth}
+    \centering
+    \inputtikz{min-path-tracing-iterations-4}
+    \caption{Algorithm has converged.}
+    \labfig{min-path-tracing-iterations-4}
+  \end{subfigure}
+  \caption{Example application of the \glsxtrshort{mpt} minimization algorithm to the double-reflection scenario from \reffig{exact-path-problem}, shown at various stages of convergence.}
+  \labfig{min-path-tracing-iterations}
+\end{figure*}
+
+The optimization problem \eqref{eq:mpt-min-param} is non-convex in general and may admit multiple local minima. Empirical observations indicate that for planar surfaces and straight edges, the minimization landscape is favorable, and standard gradient descent methods converge to valid solutions regardless of initialization (see \reffig{min-path-tracing-iterations} for an example). For more general geometries (e.g., curved surfaces), the optimization should be run multiple times using different random initializations to increase the probability of discovering all distinct physical solutions.
+
+As mentioned earlier, the cost function is designed such that valid paths correspond to global minima with zero cost. However, due to numerical precision limits and the non-convex nature of the problem, it is possible for the optimization to converge to local minima that do not correspond to valid paths (i.e., where $C(\bsit{X}^\star) \neq 0$). Therefore, it is crucial to verify the validity of each converged solution by checking that the cost is sufficiently close to zero and that the interaction points satisfy the physical constraints of their respective interactions.
+
+\subsection{Fermat-Based Methods}\labsec{fermat-based}
+
+As recalled from \refch{rt-fundamentals}, Fermat's principle states that a ray between two points follows a path that makes traversal time stationary with respect to infinitesimal path variations. This naturally raises a practical question: why not find the geometrical interaction points directly by optimizing travel time? The raw variational problem is continuous and infinite-dimensional, making direct computation impractical without discretization. More importantly, geometric constraints---the interaction points must lie on their respective objects in the prescribed order---render the problem generally non-convex. Nevertheless, under two simplifying assumptions that are widely satisfied in radio propagation modeling tools and that we will detail below, the path-finding problem becomes a strictly convex, path-length minimization problem~\sidecite{Carluccio2008,Eertmans2026EuCAP}.
+
+\subsubsection{From Time to Length}
+
+For a ray path $\bsup{r}(s)$ joining source $\bsup{x}_0$ and receiver $\bsup{x}_{K+1}$, parameterized by arc length $s\in[0,s_{\text{total}}]$, the traversal time is proportional to the optical path length
+\begin{equation}
+  L = \int\limits_{0}^{s_{\text{total}}} n(s) \, \mathrm{d}s,
+\end{equation}
+where $n(s)$ is the local refractive index.
+
+In the common case of a single homogeneous medium with constant refractive index, which is the case in \glshyph{free space} propagation, optimizing $L$ is equivalent to optimizing the total geometric path length. For a path candidate with $K$ interactions, fixing the source and receiver, the problem reduces to finding unknown interaction points $\bsup{X} =
+\begin{bmatrix}\bsup{x}_1,\ldots,\bsup{x}_{K}
+\end{bmatrix}$ as
+\begin{equation}\label{eq:fermat_min}
+  (\bsup{x}_1^\star,\ldots,\bsup{x}_{K}^\star) = \argopt_{\bsup{x}_1,\ldots,\bsup{x}_{K}} L(\bsup{X}) \eqdef \sum_{k=0}^{K} \|\bsup{x}_{k+1}-\bsup{x}_k\|.
+\end{equation}
+
+One can verify \emph{a posteriori} that, in a homogeneous medium, the optima of \eqref{eq:fermat_min} satisfy the appropriate interaction laws (angle of reflection, Keller cone for diffraction, etc.), confirming the equivalence with Fermat's principle.
+
+\subsubsection{Convex Setting Used in Practice}
+
+\begin{figure}
+  \inputtikz{fermat-path-problem}
+  \caption{Illustration of the path-finding problem under the assumptions of planar surfaces and straight edges, where $\bsup{a}_{i,:,j}$ is the $j$-th base vector of the $i$-th object, and $\bsup{b}_i$ is a reference point on the $i$-th object.}
+  \labfig{fermat-path-problem}
+\end{figure}
+
+The objective $L(\bsup{X})$ in \eqref{eq:fermat_min} is not convex in 3D unconstrained space, since the interaction points must lie on their respective objects. Two important assumptions restore strict convexity:
+\begin{enumerate}
+  \item Specular reflections occur on \emph{planar} surfaces.
+  \item Diffractions occur on \emph{straight} edges.
+\end{enumerate}
+
+Although these may appear restrictive, most outdoor 3D models are described by polygonal meshes, making both conditions broadly applicable. Under these assumptions, each interaction point $\bsup{x}_k$ lies in a low-dimensional affine subspace and can be expressed as
+\begin{equation}
+  \bsup{x}_k = \bsit{A}_k\bsit{t}_k + \bsup{b}_k,
+\end{equation}
+where $\bsup{b}_k \in \mathbb{R}^3$ is a reference point on the $k$-th object, $\bsit{A}_k \in \mathbb{R}^{3\times d_k}$ is a matrix whose columns are orthonormal basis vectors spanning the object, and $\bsit{t}_k \in \mathbb{R}^{d_k}$ is the parametric coordinate, with $d_k = 2$ for planar surfaces and $d_k = 1$ for straight edges (see \reffig{fermat-path-problem}).
+
+By stacking all parameters into a matrix $\bsit{T}$, the path-length objective becomes
+\begin{equation}\label{eq:fermat_param}
+  L(\bsit{T}) = \sum_{k=0}^{K} \left\|\bigl(\bsit{A}_{k+1}\bsit{t}_{k+1} + \bsup{b}_{k+1}\bigr) - \bigl(\bsit{A}_{k}\bsit{t}_{k} + \bsup{b}_{k}\bigr)\right\|,
+\end{equation}
+where $\bsit{A}_0\bsit{t}_0 = \bsit{0}$ and $\bsit{A}_{K+1}\bsit{t}_{K+1} = \bsit{0}$, and where $\bsup{b}_0$ and $\bsup{b}_{K+1}$ are the initial and final points, typically the transmitter and receiver positions, respectively. Each term is the Euclidean norm of an affine function of $\bsit{T}$, so $L(\bsit{T})$ is strictly convex, guaranteeing a unique global minimum for each candidate path.
+
+\subsubsection{Extension to Refraction}
+
+By assuming a homogeneous medium, we have so far equated Fermat's principle with path-length minimization. In more general settings, the traversal time depends on the local refractive index, and the objective should be the optical path length. If the medium is piecewise constant (e.g., indoor environments with different materials), refraction can be incorporated by weighting each segment by the refractive index of the traversed medium, yielding the modified objective
+\begin{equation}
+  L(\bsit{T}) = \sum_{k=0}^{K} n_k \left\|\bigl(\bsit{A}_{k+1}\bsit{t}_{k+1} + \bsup{b}_{k+1}\bigr) - \bigl(\bsit{A}_{k}\bsit{t}_{k} + \bsup{b}_{k}\bigr)\right\|,
+\end{equation}
+where $n_k$ is the refractive index of the medium traversed by the $k$-th segment. This formulation preserves convexity, enabling efficient optimization and accurate modeling of refraction effects in environments with piecewise-constant media.
+
+\subsubsection{Two Families of Fermat-Based Methods}
+
+The convex path-length formulation was first exploited by Carluccio and Albani~\sidecite{Carluccio2008} for \emph{diffraction-only} paths, using a modified Newton method with near-quadratic convergence. Puggelli, Carluccio, and Albani~\sidecite{Puggelli2014} then extended this to paths mixing reflections and diffractions via a hybrid strategy: the image method eliminates all reflection unknowns analytically, reducing the problem to pure diffraction minimization. This approach is also referred to as the \emph{image edge model} in the literature~\sidecite{Erraji2021}. While computationally elegant, this hybrid approach yields problem dimensions that depend on the number and ordering of diffractions, and introduces different code paths for reflections and diffractions---both of which are detrimental to \gls{gpu} parallelism, where all threads must follow the same execution path.
+
+Another approach is to handle all interaction types within a single optimization program of fixed dimension. In this approach, reflections and diffractions enter the same parametric path-length objective \eqref{eq:fermat_param} with no special cases. This eliminates branching and enables efficient batch processing~\sidecite{Eertmans2026EuCAP}. For example, reflections ($d_k=2$) and diffractions ($d_k=1$) can be handled with a uniform dimension by padding the second column of $\bsit{A}_k$ with zeros for edges. This yields a problem of constant size regardless of interaction type, which is essential for efficient parallel processing without per-interaction branching. However, it comes at the cost of increased computational complexity. This topic will be discussed in further detail in \refch{efficient-path-tracing}.
+
+\subsection{The Combinatorial Bottleneck and Path Validation}\labsec{combinatorial-bottleneck}
+
+While exact methods provide precise path coordinates, their practical application is governed by several critical steps that precede or follow the raw coordinate discovery: managing the combinatorial explosion of candidates, ensuring interactions occur within finite object boundaries, and verifying clear \gls{line-of-sight}.
+
+\subsubsection{Computational Complexity}\labsec{computational-complexity}
+
+\begin{figure*}
+  \centering
+  \inputtikz{path-candidates-graph}
+  \caption{Directed graph illustrating all possible path candidates from \glsxtrshort{tx} to \glsxtrshort{rx} in a scenario with $N$ possible interactions (e.g., $N$ different surfaces) and a maximum interaction order of $K=3$. Each node represents an interaction, and each directed edge represents a possible transition from one interaction to the next. An example path candidate, emphasized in black, is $\text{\glsxtrshort{tx}}\to I_3 \to I_1 \to \text{\glsxtrshort{rx}}$. The total number of candidates grows exponentially with the number of interactions, since each interaction can lead to multiple subsequent interactions.}
+  \labfig{path-candidates-graph}
+\end{figure*}
+
+Each method presented previously has relatively low complexity for a single path candidate. The image method requires a linear number of operations, whereas \gls{mpt} and Fermat-based methods require several iterations of a gradient-based optimizer. In the worst case, optimization-based methods converge in a number of iterations that grows quadratically with the number of interactions. However, the number of interactions is typically small (often well below ten) because each additional interaction decreases signal power. Consequently, the principal bottleneck of exact path tracing is not coordinate recovery for a single candidate, but the combinatorial explosion of candidates as interaction order increases.
+
+The computational complexity of finding exact paths grows exponentially with the number of interactions. For an environment with $N$ possible interactions (typically proportional to the number of objects) and a maximum interaction order $K$, the number of possible interaction sequences, or path candidates, scales as
+\begin{equation}
+  \sum_{k=1}^{K} N\left(N-1\right)^{k-1} = \frac{N \left(\left(N-1\right)^K-1\right)}{N - 2}.
+\end{equation}
+
+At each interaction order, the number of candidates grows by a factor of $N$ or $N-1$, yielding exponential growth as $K$ increases. This growth is a fundamental challenge in exact path tracing, since exhaustive evaluation becomes computationally infeasible even for moderate values of $N$ and $K$. Therefore, exact---or exhaustive---methods (mainly used in \emph{point-to-point} ray tracing) are typically limited to scenarios with a small number of interactions or low interaction orders, unless they are combined with sophisticated acceleration or complexity-reduction techniques, some of which are discussed in \refch{efficient-path-tracing}. The set of all possible path candidates is sometimes referred to as the \emph{image tree} of the scenario, because it can be visualized as a tree where each node represents an interaction and branches represent possible subsequent interactions. This analogy will be particularly useful when discussing strategies to manage the combinatorial explosion of candidates in subsequent chapters.
+
+\subsubsection{Assumptions on Infinite Objects and Geometric Validity}
+
+\begin{figure*}
+  \centering
+  \begin{subfigure}[b]{0.49\contentwidth}
+    \centering
+    \inputtikz{path-validity-object-too-small}
+    \caption{Mirror is too small.}
+    \labfig{path-validity-object-too-small}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.49\contentwidth}
+    \centering
+    \inputtikz{path-validity-ray-obstructed}
+    \caption{Ray path is obstructed.}
+    \labfig{path-validity-ray-obstructed}
+  \end{subfigure}
+  \caption{Illustration of path validity issues.}
+  \labfig{path-validity}
+\end{figure*}
+
+As hinted in the introduction to exact methods, the mathematical formulations (e.g., finding an image source across a plane or optimizing coordinates in a parametric space) initially assume that interacting objects are infinitely large and that ray paths are not obstructed by other obstacles in the scene. Under these assumptions, interaction points are determined purely from object geometry.
+
+Consequently, not all discovered paths are physically valid. A separate path-validation phase is mandatory. For a path to be retained:
+\begin{enumerate}
+  \item The intersection points must lie within the finite physical bounds of their corresponding objects (see \reffig{path-validity-object-too-small}).
+  \item The sequence of line segments connecting the source, interaction points, and receiver must not be obstructed by other obstacles in the scene (see \reffig{path-validity-ray-obstructed}).
+\end{enumerate}
+
+These validity and visibility checks are typically performed with ray-scene intersection algorithms. For a single path candidate, they require a linear or quadratic number of ray-object intersection tests and are therefore not the dominant bottleneck compared with exponential candidate growth. However, as the number of candidates increases, the cumulative cost of these checks can become significant, especially in complex scenes with many objects. Efficient implementations are therefore crucial, and techniques to manage this cost are discussed in \refch{efficient-path-tracing}.
+
+\subsubsection{Limitations on Cascaded Diffraction}
+
+Finally, it is worth noting that while exact methods can geometrically recover paths undergoing multiple diffractions, calculating their electromagnetic contributions introduces additional challenges. As discussed in \refsec{transition-regions}, cascading multiple diffraction coefficients is mathematically invalid if subsequent edges fall within preceding transition regions, making the efficient and convenient calculation of these coefficients a complex task. Although these field-computation issues are not discussed in detail here, they must be carefully addressed when developing a ray tracer. In the simulations in this book where electromagnetic fields are actually computed (see \refch{applications}), only up to single-order diffraction will be considered.
+
+\section{Inexact Methods}
+
+The exact methods presented in the previous section share a common prerequisite: for each path candidate, the precise interaction coordinates satisfying Fermat's principle must be determined. As discussed in \refsec{mpt}, this requires solving a separate problem for every candidate in the exponentially large image tree of the scenario. Inexact methods relax this requirement and trade geometric precision for computational efficiency. This makes them suitable for highly complex environments or very large numbers of path candidates, where exact methods become impractical.
+
+Inexact methods generally follow one of two philosophies: they either discretize the outgoing wavefront into a finite set of rays and trace each forward from the transmitter, or they introduce stochastic sampling over the space of possible paths. In both cases, accuracy is recovered statistically or through spatial aggregation rather than through the deterministic satisfaction of Fermat's principle.
+
+\subsection{Shooting and Bouncing Rays}
+
+\begin{figure}
+  \inputtikz{ray-launching}
+  \caption{Illustration of the \glsxtrshort{sbr} method in a simple single-reflection scenario. Rays are launched from the source in various directions, bouncing off walls according to reflection laws. A reception sphere is placed around the receiver, and any ray entering this sphere is counted as received.}
+  \labfig{ray-launching}
+\end{figure}
+
+The canonical inexact method is \glsxtrfull{sbr}, also called \emph{ray launching}~\sidecite{Ling1989}. Instead of computing path candidates analytically, \gls{sbr} launches a large but finite number of rays from the source, each in a predetermined direction, and traces them as they propagate and interact with the environment---an approach analogous to \emph{forward ray tracing} in computer graphics, as opposed to the traditional \emph{backward ray tracing} from the camera into the scene. Upon hitting a surface, each ray spawns new rays according to the relevant physical interaction laws (specular reflection, transmission via Snell's law, or diffraction along the Keller cone), and its energy is attenuated accordingly. Rays are terminated when their energy falls below a threshold or when a maximum number of interactions is reached.
+
+Because the wavefront is sampled along a finite set of directions, the angular sampling strategy is a central algorithmic design choice. Common approaches include uniform angular sampling with fixed angular increments~\sidecite[-2.5\baselineskip]{Chen1995}, Fibonacci sampling~\sidecite{Keinert2015}, icosahedral subdivision for a more isotropic ray distribution~\sidecite{Kasdorf2021}, and adaptive sampling that concentrates rays in high-gain antenna directions~\sidecite{Shi2015}. In addition, hybrid \gls{sbr}--exact pipelines use \gls{sbr} for \gls{line-of-sight} discovery and switch to exact coordinate recovery once a path candidate is identified~\sidecite{Chen1995}. The computational cost of \gls{sbr} grows with the number of launched rays and their maximum interaction order. However, it does not scale with the number of path candidates in the image tree. This makes \gls{sbr} practical in scenarios where exact methods are computationally prohibitive.
+
+The fundamental challenge of \gls{sbr} lies in its receiver-detection mechanism. Since an infinitesimally thin ray has a near-zero probability of intersecting a point receiver exactly, a \emph{reception sphere} of finite radius is placed around each receiver, and any ray entering the sphere is counted as received~\sidecite{Durgin1997}. This approximation introduces systematic artifacts: if the sphere is too large, adjacent rays belonging to the same wavefront may both enter it, artificially inflating received power through double-counting (\reffig{ray-launching-double-hit}). Conversely, if the sphere is too small, valid contributions are missed (\reffig{ray-launching-miss}). For approximately uniform angular spacing $\alpha$ (in radians) and total unwrapped distance $d$, a practical guideline is $r\approx\alpha \tfrac{d}{\sqrt{3}}$, which matches the local ray-tube footprint scale at the receiver distance and balances misses against double-counting. Another artifact, studied in depth by Novak~\sidecite{Novak2022}, is \emph{inconsistent rays}, i.e., geometrically valid rays belonging to the same wavefront but spatially displaced by the reception-sphere tolerance, which can significantly overestimate signal strength in constrained environments such as tunnels, particularly at distances exceeding \qty{100}{\meter}. These artifacts are intrinsic to the reception-sphere mechanism and represent a fundamental limitation of \gls{sbr}.
+
+\begin{figure*}
+  \centering
+  \begin{subfigure}[b]{0.49\contentwidth}
+    \centering
+    \inputtikz{ray-launching-double-hit}
+    \caption{Double-counting artifact.}
+    \labfig{ray-launching-double-hit}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.49\contentwidth}
+    \centering
+    \inputtikz{ray-launching-miss}
+    \caption{Reception sphere is missed.}
+    \labfig{ray-launching-miss}
+  \end{subfigure}
+  \caption{Illustration of possible shortcomings with the \glsxtrshort{sbr} method.}
+  \labfig{ray-launching-shortcomings}
+\end{figure*}
+
+To mitigate the double-counting issue, some implementations introduce a weighting scheme in which each ray contribution is divided by the number of rays entering the reception sphere, effectively averaging contributions from rays that belong to the same wavefront~\sidecite{Durgin1997}. Other implementations use hash-based grouping to identify and merge rays entering the same reception sphere, retaining only the most significant ones (e.g., the closest to the receiver or the shortest path)~\sidecite{Yun2001,Novak2019}. In practice, the hash is often computed from the ray's interaction list (i.e., the corresponding path candidate), which enables grouping rays associated with the same wavefront.
+
+\subsection{Vertical Plane Launching}
+
+In dense macrocellular urban scenarios, full 3D ray launching can be unnecessarily expensive when dominant mechanisms are largely governed by street-canyon guidance and over-rooftop propagation. \Gls{vpl} addresses this by decoupling propagation into two coupled problems: horizontal exploration across building footprints and vertical-plane evaluation to model rooftop diffraction and height-dependent effects~\sidecite{Liang1998,AguadoAgelet2000}. This 2.5D approximation often captures dominant mechanisms at significantly lower computational cost than exhaustive 3D launching.
+
+The method is especially effective when the environment has strong vertical regularity (e.g., blocks of buildings with similar heights) and when out-of-plane scattering is not dominant. Its main limitation is that strongly three-dimensional effects---for example, complex out-of-plane reflections or rich scattering from highly irregular facades---are only approximated. In such cases, full 3D methods remain preferable despite higher runtime.
+
+\subsection{Volumetric and Extent-Based Tracing}
+
+To address the sampling artifacts of \gls{sbr}, volumetric tracing methods replace infinitesimally thin rays with spatial extents, ensuring that the power carried by each ray tube is coherently assigned to all receivers it encompasses.
+
+\subsubsection{Beam Tracing}
+
+Beam tracing replaces point rays with thick, polyhedral pyramidal beams, each representing an entire cone of directions from the source~\sidecite{Tan2015}. Because a beam covers a continuum of potential ray directions, it eliminates the sampling artifacts of \gls{sbr} and entirely removes the need for a reception sphere: a receiver is simply illuminated when it falls inside the beam footprint, and the received power is computed analytically from the beam's geometry. However, as beams interact with complex, highly tessellated environments, they fracture into an exponentially growing number of sub-beams, making the method difficult to scale to scenes with many surfaces or curved objects.
+
+\subsubsection{Ray-Tube Tracing}
+
+Ray-tube tracing is an intermediate approach between standard \gls{sbr} and full beam tracing~\sidecite{Wang2003}. Each ray is augmented with a surrounding tube footprint, and the algorithm tracks the principal radii of curvature of the associated wavefront as it propagates. This allows macroscopic energy flow to be captured without the combinatorial fragmentation of strict beam clipping. Ray-tube methods are particularly effective in urban cellular scenarios, where the wavefront curvature evolves smoothly over long propagation distances.
+
+\subsubsection{Voxel Cone Tracing}
+
+To handle highly detailed curved geometries and diffuse scattering without the geometric fragility of beam clipping, voxel cone tracing discretizes the scene into a hierarchical octree-based voxel grid and traces cones with an expanding footprint via ray marching~\sidecite{Tropkina2022}. This approach is particularly suited to modeling scattering in the \gls{shf} and \gls{ehf} bands, where the detailed surface curvature of objects such as vehicles significantly influences the scattered field distribution.
+
+\subsubsection{Interception Plane Instead of Reception Sphere}
+
+Many issues with \gls{sbr} arise from the reception-sphere mechanism. A sphere is natural when the objective is power at one specific receiver position. In many applications, however, such as network planning, the objective is power over an area, i.e., a \emph{coverage map}. In that setting, it is often more efficient (and more accurate) to replace the reception sphere with a large \emph{interception plane} covering the region where rays may arrive. Each ray is tested for intersection with this plane, and the intersection point is used to accumulate received-power contributions. After the path tracing phase, the interception plane is tiled into cells, from which received power (or other quantities) is estimated around each position. This approach removes artifacts caused by the reception-sphere radius and captures all valid contributions while keeping computational complexity independent of plane size. It does not, however, fully remove double-counting: multiple rays may still intersect the same cell and overestimate power locally. Careful ray-grouping and weighting strategies are therefore still required.
+
+This approach is used, for example, by Sionna~RT and is detailed in their technical report~\sidecite[][Sec.~4]{Aoudia2025}.
+
+\subsection{Stochastic and Monte Carlo Methods}
+
+An alternative to deterministic wavefront discretization is to use controlled randomness in path generation, drawing on the extensive body of \gls{mc} methods developed in the computer graphics community for light transport simulation~\sidecite{Veach1997Thesis}.
+
+\subsubsection{Monte Carlo Ray Tracing}
+
+Instead of launching rays on a predetermined angular grid, \gls{mc} ray tracing samples ray directions from a probability density function designed to concentrate samples in high-contribution directions~\sidecite{Veach1997Thesis}. To prevent infinite recursion, rays are terminated probabilistically using \emph{Russian roulette}: a low-energy ray is discarded with some probability, while surviving rays are upweighted to maintain an unbiased estimator. Variance reduction techniques, including importance sampling, stratified sampling, and control variates, can be used to accelerate convergence~\sidecite{Veach1997Thesis}.
+
+\subsubsection{Bidirectional Path Tracing}
+
+\Gls{bdpt} traces sub-paths simultaneously from both the transmitter and the receiver and then connects them by evaluating their mutual visibility~\sidecite{Taygur2023}. By using large, mathematically rigorous interaction surfaces instead of reception spheres, \gls{bdpt} eliminates the geometric artifacts of standard \gls{sbr} and reduces errors in multiple-diffraction scenarios~\sidecite{Taygur2023}. Multiple importance sampling~\sidecite{Veach1997Thesis} can further be applied to combine the forward and backward sub-paths optimally according to their respective contributions, yielding a statistically efficient, unbiased estimator.
+
+\subsubsection{Metropolis Light Transport}
+
+\Gls{mlt} applies a Markov chain \gls{mc} technique directly to path space~\sidecite{Veach1997MetropolisLT}. Starting from a valid path found by a standard \gls{mc} method, it generates new candidate paths by applying small random perturbations (mutations) to the current path, accepting or rejecting each proposal according to its relative energy contribution. This local exploration of path space allows \gls{mlt} to efficiently discover and densely sample high-contribution paths in heavily occluded environments, without wasting computations on geometrically unproductive regions.
+
+\subsubsection{Photon Mapping}
+
+Photon mapping is a two-pass algorithm that treats electromagnetic energy as discrete packets~\sidecite{Schmitz2006}. In the first pass, photons are emitted from the source, traced through the environment, and their interaction points are stored in a spatial data structure (typically a k-d tree~\sidecite{Bentley1975}). In the second pass, received power at any point is estimated by gathering the nearest stored photons using a kernel density estimator. The method provides local estimates of the delay spread and handles diffuse scattering naturally, without the combinatorial growth of the image tree.
+
+\subsection{Machine Learning Surrogates}
+
+As in other computational physics domains, machine learning surrogates have emerged as a potential alternative to traditional channel modeling methods, including ray tracing. The hope is that, by learning from data, these models can become more efficient than ray tracing while maintaining high accuracy.
+
+Most machine learning applications in radio propagation focus on predicting an electromagnetic quantity directly---for example path loss, received power, or field values---rather than predicting the geometry of propagation paths~\sidecite{Vasudevan2024}. A smaller line of work targets richer physical outputs such as the \gls{cir}~\sidecite{Wang2025}, and only a few approaches explicitly model the path geometry itself. One notable example is the SANDWICH model~\sidecite{Jin2025}, which learns to predict the coordinates of interaction points by treating a ray's path as a step-by-step sequence. To achieve this, SANDWICH uses a neural network to build the trajectory one bounce at a time, similar to the traditional \gls{sbr} method: at each step, the model determines the ray's next direction and how it interacts with the environment, such as bouncing off a wall or passing through it.
+
+Learning channel characteristics directly can be highly effective in fixed settings, but it typically ties the model to the data distribution used for training: geometry, materials, carrier frequency, antenna patterns, and scenario type. As a result, transferring such models to new environments often requires retraining or substantial adaptation~\sidecite{Vasudevan2024}. This dependency is one reason why purely data-driven surrogates remain difficult to deploy as general-purpose replacements for geometric ray tracing.
+
+Conversely, learning ray-path geometry is not always the most effective computational target. In point-to-point ray tracing, the main bottleneck is typically not solving the coordinates of one candidate path, but the combinatorial number of path candidates that must be generated and tested. Predicting path geometry alone therefore does not remove the core complexity driver unless it also reduces candidate exploration. Building on this observation, we present in \refch{research-applications} a machine-learning-aided ray tracing model designed to reduce the computational complexity of point-to-point ray tracing~\sidecite{Eertmans2026NPJWT}.
+
+\section{Conclusion}
+
+This chapter has presented the main families of path tracing algorithms used in radio wave propagation modeling, ranging from exact deterministic methods to inexact wavefront-sampling and data-driven surrogate approaches. Exact methods---the image method, \gls{mpt}, and Fermat-based minimization---recover precise ray paths satisfying Fermat's principle for a given path candidate. However, they are subject to the $\mathcal{O}(N^K)$ combinatorial explosion of the image tree, which limits their scalability to scenarios with few interactions or small numbers of objects. Inexact methods, including \gls{sbr}, \gls{vpl}-style 2.5D approximations, volumetric tracing, and \gls{mc} methods, trade geometric rigor for scalability. They address the combinatorial bottleneck by either sampling the wavefront discretely or exploring path space stochastically, at the cost of systematic artifacts (reception spheres, statistical noise) or reduced accuracy for specular paths. Machine learning surrogates represent an emerging third paradigm that can bypass geometric path tracing once trained, although they require substantial data and often generalize less readily to new environments.
+
+The methods and trade-offs presented in this chapter provide the necessary background for the rest of this book. In particular, the exponential growth of the image tree motivates the development of more efficient algorithms for generating and evaluating path candidates, which is the focus of \refch{efficient-path-tracing}. More fundamentally, the use of direct models to determine the channel response raises an open question: can the channel characteristics be computed not only forward, but also \emph{differentiably} with respect to scene parameters? \refch{drt} addresses this question by introducing differentiable ray tracing as a way to compute gradients of the channel response with respect to environmental geometry, enabling inverse design and optimization problems that forward methods alone cannot address.

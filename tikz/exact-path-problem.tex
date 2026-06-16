@@ -1,0 +1,20 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{intersections}
+% \usetikzlibrary{patterns.meta}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\glsxtrshort}[1]{#1}
+% \providecommand{\Glsxtrlong}[1]{#1}
+\begin{tikzpicture}[scale=.75]
+  \colorlet{green}{green!80!black}
+  \tikzset{point/.style={draw,cross out,thick,inner sep=2pt}}
+  \tikzstyle{ground}=[fill,draw=none,minimum width=0.3,minimum height=0.6]
+
+  \node[point,label=below:{Transmitter},name=BS] (BS) at (2,-1) {};
+  \node[point,label=above:{Receiver},name=UE] (UE) at (2,4) {};
+
+  \draw[ground,pattern={Lines[angle=0]},rotate around={45:(0,0)}] (0,0) rectangle ({3.5/cos(45)}, .1);
+  \draw[name path=W1,red,thick] (0,0) -- (3.5,3.5) node[midway,above,sloped,black] {Mirror 1};
+  \draw[ground,pattern={Lines[angle=45]}] (5,.5) rectangle (5.1, 4);
+  \draw[name path=W2,red,thick] (5,.5) -- (5,4) node[midway,below,sloped,black] {Mirror 2};
+\end{tikzpicture}

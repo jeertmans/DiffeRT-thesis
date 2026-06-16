@@ -1,0 +1,21 @@
+% Requires:
+% \usetikzlibrary{patterns}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\glsxtrshort}[1]{#1}
+\begin{tikzpicture}
+  \tikzset{point/.style={draw,circle,thick,inner sep=2pt}}
+  \tikzset{tx/.style={point,cross out}}
+  \tikzset{rx/.style={point,cross out}}
+  \node[tx,label=below:{\glsxtrshort{tx}}] (TX) at (-.3,-.5) {};
+  \node[rx,label=above:{\glsxtrshort{rx}}] (RX) at (2,2) {};
+
+  \filldraw[thick,pattern=north east lines, pattern color=black] (-1,.5) node[point,red,fill=red,label={[anchor=north east,red]$e_1$}] {}
+  -- ++(1,0) node[midway,below] {$s_1$} node[point,red,fill=red,label={[anchor=north west,red]$e_2$}] {}
+  -- ++(-1,1) node[midway,above,sloped] {$s_2$} node[point,red,fill=red,label={[anchor=south,red]$e_3$}] {}
+  -- cycle node[midway,left] {$s_3$};
+
+  \filldraw[thick,pattern=north east lines, pattern color=black] (2,-.5) node[point,red,fill=red,label={[anchor=north east,red, yshift=-0.1cm]$e_4$}] {}
+  -- ++(1.5,0) node[midway,below] {$s_4$} node[point,red,fill=red,label={[anchor=north west,red,yshift=-0.1cm]$e_5$}] {}
+  -- ++(0,1.5) node[midway,right] {$s_5$} node[point,red,fill=red,label={[anchor=south,red]$e_6$}] {}
+  -- cycle node[midway,above,sloped] {$s_6$};
+\end{tikzpicture}

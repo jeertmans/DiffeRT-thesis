@@ -1,0 +1,43 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{siunitx}
+% \usepgfplotslibrary{groupplots}
+% INCLUDE ../data/ch6-material-calibration-optimization.txt relto ../main.tex
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={
+        group size=1 by 2,
+        vertical sep=1.1cm,
+        xlabels at=edge bottom,
+        ylabels at=edge left,
+      },
+      width=8.0cm,
+      height=4.0cm,
+      grid=major,
+      xmajorgrids=true,
+      ymajorgrids=true,
+      ticklabel style={/pgf/number format/fixed},
+      legend style={font=\footnotesize},
+      legend pos=south east,
+    ]
+    \nextgroupplot[
+      title={Calibration loss},
+      xticklabel=\empty,
+      ylabel={Loss},
+      ymode=log,
+    ]
+    \addplot[thick, color=red]
+    table[x=step, y=loss_nae, col sep=comma] {data/ch6-material-calibration-optimization.txt};
+
+    \nextgroupplot[
+      title={Estimated conductivity},
+      ylabel={$\sigma$ (\unit{\siemens\per\meter})},
+      xlabel={Optimization step},
+    ]
+    \addplot[thick, color=blue, forget plot]
+    table[x=step, y=estimated_conductivity_s_per_m, col sep=comma] {data/ch6-material-calibration-optimization.txt};
+    \addplot[thick, dashed, color=black]
+    coordinates {(0,0.6260499535669882) (200,0.6260499535669882)};
+    \legend{Reference}
+  \end{groupplot}
+\end{tikzpicture}

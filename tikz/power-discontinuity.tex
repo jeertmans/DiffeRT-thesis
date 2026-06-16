@@ -1,0 +1,68 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{patterns.meta}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\bsit}[1]{\mathbf{#1}}
+\begin{tikzpicture}[
+    scale=2.0,
+    wall/.style={draw=red, thick},
+    ground/.style={fill,draw=none,minimum width=0.3,minimum height=0.6},
+  ]
+  \pgfdeclarelayer{background}
+  \pgfsetlayers{background,main}
+  % Define colors for the radial gradient
+  % MPL plasma:
+  \definecolor{plasmacenter}{rgb}{0.940015, 0.975158, 0.131326}
+  \definecolor{plasma25}{rgb}{0.973416, 0.585761, 0.25154}
+  \definecolor{plasma50}{rgb}{0.798216, 0.280197, 0.469538}
+  \definecolor{plasma75}{rgb}{0.494877, 0.01199, 0.657865}
+  \definecolor{plasmaedge}{rgb}{0.050383, 0.029803, 0.527975}
+
+  % 50bp is the default radius PGF uses to scale shadings.
+  \pgfdeclareradialshading{plasmashading}{\pgfpointorigin}{
+    color(0bp)=(plasmacenter);
+    color(12.5bp)=(plasma25);
+    color(25bp)=(plasma50);
+    color(37.5bp)=(plasma75);
+    color(50bp)=(plasmaedge)
+  }
+
+  \coordinate (SW) at (-0.5, -1.5);
+  \coordinate (NE) at (+2.5, +1.5);
+  \coordinate (TX) at (0, 0);
+
+  % Upper wall (slanted up)
+  \coordinate (S1) at (0.5, +0.9);
+  \coordinate (E1) at (1.5, +1.1);
+
+  % Lower wall (slanted up, parallel to the top wall)
+  \coordinate (S2) at (0.2, -1.0);
+  \coordinate (E2) at (1.2, -0.8);
+
+  \clip[rounded corners] (SW) rectangle (NE);
+
+  \begin{scope}
+    % LOS region updated for the new wall coordinates
+    \clip (S1) -- (20, 36) -- (-20, 36) -- (-20, -100) -- (20, -100) -- (S2) -- (E2) -- (20, -13.3) -- (20, 14.7) -- (E1) -- cycle;
+
+    % Replace the flat rectangle fill with a radial shading centered at the TX coordinate.
+    % We use a radius of 2.9 to ensure the gradient reaches the far corners of the bounding box.
+    \fill[shading=plasmashading] (TX) circle (2.9);
+  \end{scope}
+  \draw[thick,densely dashed,opacity=0.5,blue] (S1) -- (20, 36);
+  \draw[thick,densely dashed,opacity=0.5,blue] (E1) -- (20, 14.7);
+  \draw[thick,densely dashed,opacity=0.5,blue] (S2) -- (20, -100);
+  \draw[thick,densely dashed,opacity=0.5,blue] (E2) -- (20, -13.3);
+
+  \draw[dashed, ultra thick, rounded corners] (SW) rectangle (NE);
+  \begin{pgfonlayer}{background}
+    \draw[ground,pattern={Lines[angle={45-atan(0.2)}]},rotate around={atan(0.2):(S1)}] (S1) rectangle ++({1},+.1);
+  \end{pgfonlayer}
+
+  \draw[wall] (S1) -- (E1) node[midway,above,xshift=0.4cm,yshift=0.35cm] {$\nabla=\bsit{0}$};
+  \draw[ground,pattern={Lines[angle={45-atan(0.2)}]},rotate around={atan(0.2):(S2)}] (S2) rectangle ++({1},-.1);
+  \draw[wall] (S2) -- (E2) node[midway,below,xshift=0.5cm,yshift=-0.4cm] {$\nabla=\bsit{0}$};
+
+  % Added 'at (TX)' to explicitly anchor the node to the TX coordinate
+  \node[draw, cross out, thick, inner sep=2pt] at (TX) {};
+\end{tikzpicture}

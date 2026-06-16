@@ -1,0 +1,99 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{tikz}
+% \usepackage{tikz-3dplot}
+% \usetikzlibrary{3d}
+% \usetikzlibrary{angles}
+% \usetikzlibrary{quotes}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\hat{\mathbf{#1}}}
+\tdplotsetmaincoords{80}{45}
+\begin{tikzpicture}[tdplot_main_coords, yscale=0.6, scale=1.2]
+
+  % Define styles
+  \tikzset{point/.style={cross out, draw=black, thick, inner sep=2pt}}
+  \tikzset{surface/.style={draw=black!70, fill=gray!10, fill opacity=0.6}}
+  \tikzset{wall-surface/.style={fill=gray, fill opacity=0.5, draw=black, draw opacity=0.5, dashed, thick}}
+
+  % Cone drawing macros
+  \newcommand{\coneback}[4][]{
+    \draw[dashed,canvas is xy plane at z=#2, #1] (-135-#4:#3) arc (-135-#4:-245+#4:#3) -- (O) --cycle;
+  }
+  \newcommand{\conefront}[4][]{
+    \draw[dashed,canvas is xy plane at z=#2, #1] (45-#4:#3) arc (45-#4:-135+#4:#3) -- (O) --cycle;
+  }
+  \coordinate (O) at (0,0,0);
+
+  % Cone dimensions
+  \pgfmathsetmacro{\zCone}{3}
+  \pgfmathsetmacro{\rCone}{2}
+
+  % Transmitter (Tx) coordinates
+  \pgfmathsetmacro{\angleTx}{-135}
+  \pgfmathsetmacro{\zTx}{-2}
+  \pgfmathsetmacro{\rTx}{abs(\zTx * \rCone / \zCone)}
+  \pgfmathsetmacro{\xTx}{\rTx * cos(\angleTx)}
+  \pgfmathsetmacro{\yTx}{\rTx * sin(\angleTx)}
+
+  % Receiver (Rx) coordinates
+  \pgfmathsetmacro{\angleRx}{160}
+  \pgfmathsetmacro{\zRx}{3}
+  \pgfmathsetmacro{\rRx}{abs(\zRx * \rCone / \zCone)}
+  \pgfmathsetmacro{\xRx}{\rRx * cos(\angleRx)}
+  \pgfmathsetmacro{\yRx}{\rRx * sin(\angleRx)}
+
+  \coordinate (Tx) at (\xTx,\yTx,\zTx);
+  \coordinate (Rx) at (\xRx,\yRx,\zRx);
+
+  % Wedge dimensions
+  \pgfmathsetmacro{\length}{3}
+  \pgfmathsetmacro{\lengthback}{1.2*\length}
+  \pgfmathsetmacro{\lengthx}{0.5*\lengthback}
+  \coordinate (L) at (0,0,-{\length/2});
+
+  % Draw the back part of the cone
+  \coneback[surface]{\zCone}{\rCone}{0}
+
+  % Draw the back wedge face
+  \fill[wall-surface] (L) -- ([shift={(-\lengthx,\lengthback,0)}]L) -- ([shift={(-\lengthx,\lengthback,\length)}]L) -- ([shift={(0,0,\length)}]L) -- cycle;
+
+  % Draw the incident and diffracted rays
+  \draw[->, thick] (Tx) -- (O) node[midway, above, sloped,font=\footnotesize] {$\bsup{s}^i$};
+  \draw[->, thick] (O) -- (Rx) node[midway, above, sloped, rotate=180,font=\footnotesize] {$\bsup{s}^d$};
+
+  \coordinate (Eneg) at (0,0,-2.5);
+  \coordinate (Epos) at (0,0,4.5);
+
+  % Draw the \beta_0 angle between incident ray and edge
+  \pic [draw, <->, thick, "$\beta_0^i$", angle eccentricity=1.5, angle radius=0.6cm] {angle = Tx--O--Eneg};
+  \pic [draw, <->, thick, "$\beta_0^d$", angle eccentricity=1.2, angle radius=1.4cm] {angle = Epos--O--Rx};
+
+  % Draw the front wedge face
+  \fill[wall-surface] (L) -- ([shift={(\length,0,0)}]L) -- ([shift={(\length,0,\length)}]L) -- ([shift={(0,0,\length)}]L) -- cycle;
+
+  % Draw the edge (z-axis)
+  \draw[->, thick] (Eneg) -- (Epos) node[above] {$\uvec{e}$};
+
+  % Draw the front part of the cone
+  \conefront[surface]{\zCone}{\rCone}{0}
+
+  % Draw Tx and Rx nodes as crosses
+  \node[point, label=below:{Source}] (nTx) at (Tx) {};
+  \node[point, label=above:{$\bsup{P}$}] (nRx) at (Rx) {};
+
+  % Draw projection lines (h_i, h_d)
+  \draw[thick, gray, opacity=0.5, dashed] (Tx) -- (0,0,\zTx);% node[midway, below, sloped] {$\rho'$};
+  \draw[thick, gray, opacity=0.5, dashed] (Rx) -- (0,0,\zRx);% node[midway, above, sloped] {$\rho$};
+
+  % Right angle indicators
+  \pgfmathsetmacro{\dx}{0.15}
+  \draw[thick] (0,0,\zTx) -- ++({\dx * \xTx},{\dx * \yTx},0) -- ++({-\dx * \xTx},{-\dx * \yTx},{\dx*\rTx}) -- cycle;
+  \draw[thick] (0,0,\zRx) -- ++({\dx * \xRx},{\dx * \yRx},0) -- ++({-\dx * \xRx},{-\dx * \yRx},{\dx*\rRx}) -- cycle;
+
+  % Angles beta_0' and beta_0 labels (approximate placement for 3D perspective)
+  %\node[anchor=west] at (0.1, 0, -1) {$\beta_0'$};
+  %\node[anchor=west] at (0.1, 0, 1) {$\beta_0$};
+  \node[anchor=north west] at (O) {$\bsup{x}_e$};
+
+\end{tikzpicture}

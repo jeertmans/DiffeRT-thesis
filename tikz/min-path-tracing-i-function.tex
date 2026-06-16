@@ -1,0 +1,112 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{siunitx}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{patterns.meta}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\hat{\mathbf{#1}}}
+\begin{tikzpicture}[
+    scale=0.6,
+    ray/.style={->,thick,draw=green!80!black,opacity=0.75},
+    invalid ray/.style={ray,dashed},
+    wall/.style={draw=red, thick},
+    normal/.style={->, thick},
+  ]
+  \tikzset{point/.style={draw,cross out,thick,inner sep=2pt}}
+  \tikzstyle{ground}=[fill,draw=none,minimum width=0.3,minimum height=0.6]
+  \tikzstyle{intersection-point}=[draw=blue,fill=white,fill opacity=0.5,circle,thick,inner sep=2pt]
+
+  % Define custom colors matching the image
+  \definecolor{myblue}{RGB}{91, 192, 222}
+  \definecolor{myred}{RGB}{176, 96, 112}
+
+  % Fixed Transmit/Receive positions
+  \def\TxX{-2.5} \def\TxY{3}
+  \def\RxX{2.5}  \def\RxY{3}
+
+  % Wall boundaries
+  \def\WallStart{-1.5} \def\WallEnd{1.5}
+
+  % ---------------------------------------------------------
+  % Case 1: C = 0.00 (Center)
+  % ---------------------------------------------------------
+  \begin{scope}[xshift=0cm]
+    \node[point] (Tx) at (\TxX, \TxY) {};
+    \node[point] (Rx) at (\RxX, \RxY) {};
+    \coordinate (S)  at (0, 0); % Specular point
+
+    % Rays
+    \draw[ray] (Tx) -- (S) -- (Rx);
+
+    % Wall & Normal
+    \draw[ground,pattern={Lines[angle=-45]}] (\WallStart, 0) rectangle (\WallEnd, -0.1);
+    \draw[wall] (\WallStart, 0) -- (\WallEnd, 0);
+    \draw[normal] (S) -- +(0, 2) node[above] {$\uvec{n}$};
+
+    % Arcs
+    \draw[->,thick] (S) ++(90:1) arc (90:129.8:1) node[midway,above,font=\footnotesize] {$\theta_i$} node[pos=1, left,font=\footnotesize] {\qty{39.74}{\degree}};
+    \draw[->,thick]  (S) ++(90:1) arc (90:50.2:1) node[midway,above,font=\footnotesize] {$\theta_r$} node[pos=1, right,font=\footnotesize] {\qty{39.74}{\degree}};
+
+    % Points
+    \node[intersection-point] at (S) {};
+
+    % Labels
+    \node[anchor=north] at (0,-0.5) {$C = \underbrace{0.00}_{C^{\mathrm{int}}} + \underbrace{0.00}_{C^{\mathrm{obj}}}$};
+  \end{scope}
+
+  % ---------------------------------------------------------
+  % Case 2: C = 0.06 (Shifted Left)
+  % ---------------------------------------------------------
+  \begin{scope}[xshift=7cm]
+    \node[point] (Tx) at (\TxX, \TxY) {};
+    \node[point] (Rx) at (\RxX, \RxY) {};
+    \coordinate (S)  at (-0.63, 0); % Specular point
+
+    % Rays
+    \draw[invalid ray] (Tx) -- (S) -- (Rx);
+
+    % Wall & Normal
+    \draw[ground,pattern={Lines[angle=-45]}] (\WallStart, 0) rectangle (\WallEnd, -0.1);
+    \draw[wall] (\WallStart, 0) -- (\WallEnd, 0);
+    \draw[normal] (S) -- +(0, 2) node[above] {$\uvec{n}$};
+
+    % Arcs
+    \draw[->, thick] (S) ++(90:1) arc (90:121.9:1) node[midway,above,font=\footnotesize] {$\theta_i$} node[pos=1, left,font=\footnotesize] {\qty{31.84}{\degree}};
+    \draw[->, thick]  (S) ++(90:1) arc (90:43.8:1) node[midway,above,font=\footnotesize] {$\theta_r$} node[pos=1, right,font=\footnotesize] {\qty{46.18}{\degree}};
+
+    % Points
+    \node[intersection-point] at (S) {};
+
+    % Labels
+    \node[anchor=north] at (0,-0.5) {$C = \underbrace{0.06}_{C^{\mathrm{int}}} + \underbrace{0.00}_{C^{\mathrm{obj}}}$};
+  \end{scope}
+
+  % ---------------------------------------------------------
+  % Case 3: C = 0.18 (Shifted Right)
+  % ---------------------------------------------------------
+  \begin{scope}[xshift=14cm]
+    \node[point] (Tx) at (\TxX, \TxY) {};
+    \node[point] (Rx) at (\RxX, \RxY) {};
+    \coordinate (S)  at (1.11, 0); % Specular point
+
+    % Rays
+    \draw[invalid ray] (Tx) -- (S) -- (Rx);
+
+    % Wall & Normal
+    \draw[ground,pattern={Lines[angle=-45]}] (\WallStart, 0) rectangle (\WallEnd, -0.1);
+    \draw[wall] (\WallStart, 0) -- (\WallEnd, 0);
+    \draw[normal] (S) -- +(0, 2) node[above] {$\uvec{n}$};
+
+    % Arcs
+    \draw[->, thick] (S) ++(90:1) arc (90:140.3:1) node[midway,above,font=\footnotesize] {$\theta_i$} node[pos=1, left,font=\footnotesize] {\qty{50.26}{\degree}};
+    \draw[->, thick]  (S) ++(90:1) arc (90:65.2:1) node[pos=.7,above,font=\footnotesize] {$\theta_r$} node[pos=1, right,font=\footnotesize] {\qty{25.26}{\degree}};
+
+    % Points
+    \node[intersection-point] at (S) {};
+
+    % Labels
+    \node[anchor=north] at (0,-0.5) {$C = \underbrace{0.18}_{C^{\mathrm{int}}} + \underbrace{0.00}_{C^{\mathrm{obj}}}$};
+  \end{scope}
+
+\end{tikzpicture}

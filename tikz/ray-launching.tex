@@ -1,0 +1,66 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{patterns.meta}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\glsxtrshort}[1]{#1}
+% \providecommand{\Glsxtrlong}[1]{#1}
+\begin{tikzpicture}[
+    scale=1,
+    point/.style={draw, cross out, thick, inner sep=2pt, fill=white},
+    receiver/.style={point},
+    source/.style={point},
+    imagesource/.style={point,opacity=0.75},
+    pathline/.style={draw=green!80!black, thick, opacity=0.75},
+    wall/.style={draw=red, thick},
+    ground/.style={fill,draw=none,minimum width=0.3,minimum height=0.6},
+    interception/.style={draw=blue, dashed, thick}
+  ]
+  % === Ray Launching Parameters ===
+  \def\numrays{3}         % Number of rays on EACH side of the central ray (Total = 2*numrays + 1)
+  \def\anglestep{8}       % Angular spacing between rays in degrees
+  \def\centerangle{136.5}   % Angle of the central ray (135 perfectly hits the receiver)
+  \def\rcvradius{0.45}    % Radius of the interception sphere
+
+  % Coordinates
+  \coordinate (R) at (-2.5, -3);
+  \coordinate (S) at (2.5, -2);
+
+  % Interception Sphere
+  \draw[interception] (R) circle (\rcvradius);
+  \fill[blue, opacity=0.05] (R) circle (\rcvradius); % Subtle fill for visibility
+
+  % Wall (adjusted wall ground size slightly to fit better)
+  \draw[ground,pattern={Lines[angle=-45]}] (-3, 0) rectangle (3,0.1);
+  \draw[wall] (-3, 0) -- (3, 0);
+
+  \begin{scope}
+    \clip (-3, 0.2) rectangle (3.0, -4.0);
+    % === Dynamic Ray Calculation ===
+    \foreach \i in {-\numrays,...,\numrays} {
+      % Calculate the launch angle for the current ray
+      \pgfmathsetmacro{\rayangle}{\centerangle + \i*\anglestep}
+
+      % 1. Intersection with the wall (y=0)
+      % Using point-slope formula: x_int = x_s + (y_int - y_s) / tan(angle)
+      % x_int = 2.5 + (0 - (-2)) / tan(angle) = 2.5 + 2 / tan(angle)
+      \pgfmathsetmacro{\xint}{2.5 + 2/tan(\rayangle)}
+      \coordinate (P\i) at (\xint, 0);
+
+      % 2. End point of reflected ray (drawing down, let clip handle excess)
+      % Reflected angle is -\rayangle. Let's make the lines long, so the clip works.
+      \pgfmathsetmacro{\xend}{\xint + 10/tan(\rayangle)} % Extending far to ensure clipping
+      \coordinate (E\i) at (\xend, -10);
+
+      % Draw the incident and reflected ray - we might need to adjust endpoint or make it draw to a fixed y far away
+      \ifnum\i=0
+      \draw[pathline] (S) -- (P\i) -- (E\i);
+      \else
+      \draw[pathline,dashed] (S) -- (P\i) -- (E\i);
+      \fi
+    }
+  \end{scope}
+
+  % Points (Drawn last so they stay clearly on top of the rays)
+  \node[source, label=below:{Source}] at (S) {};
+  \node[receiver, label={[below,yshift=-.5cm]Receiver}] at (R) {};
+\end{tikzpicture}

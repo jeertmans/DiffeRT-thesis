@@ -1,0 +1,59 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+  hooks:
+  - id: check-yaml
+  - id: check-toml
+  - id: end-of-file-fixer
+    exclude: .*\.svg$
+  - id: trailing-whitespace
+- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+  rev: v2.16.0
+  hooks:
+  - id: pretty-format-yaml
+    args: [--autofix]
+  - id: pretty-format-toml
+    args: [--autofix, --trailing-commas]
+- repo: https://github.com/flying-sheep/bibfmt
+  rev: v4.3.0
+  hooks:
+  - id: bibfmt
+    args:
+    - --sort-by-bibkey
+    - --drop=abstract
+    - --drop=issue_date
+    - --drop=keywords
+    - --drop=month
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.4.2
+  hooks:
+  - id: codespell
+    types: [markdown, tex]
+    args: [--skip=*.sty]
+- repo: https://github.com/WGUNDERWOOD/tex-fmt
+  rev: v0.5.7
+  hooks:
+  - id: tex-fmt
+    args: [--nowrap]
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.15.16
+  hooks:
+  - id: ruff-check
+    args: [--fix]
+    types_or: [python, pyi, jupyter]
+  - id: ruff-format
+    types_or: [python, pyi, jupyter]
+- repo: local
+  hooks:
+  - id: format-tikz-files
+    name: format TikZ files
+    description: Format TikZ files
+    language: system
+    entry: uv run scripts/format-tikz-preamble.py
+    pass_filenames: false
+  - id: sync-tikz-deps
+    name: sync TikZ dependencies
+    description: Synchronize TikZ dependencies
+    language: system
+    entry: uv run scripts/sync-tikz-deps.py
+    pass_filenames: false

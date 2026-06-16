@@ -1,0 +1,65 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{tikz-3dplot}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\glsxtrshort}[1]{#1}
+% \providecommand{\uvec}[1]{\hat{\mathbf{#1}}}
+\tdplotsetmaincoords{0}{90}
+%\tdplotsetmaincoords{70}{110}
+\begin{tikzpicture}[tdplot_main_coords, scale=1.2, line join=round, line cap=round]
+  \tikzset{point/.style={draw,cross out,thick,inner sep=2pt}}
+  \tikzset{wall-surface/.style={fill=gray,fill opacity=.5,draw=black,draw opacity=0.5,thick,dashed}}
+  \tikzset{edge/.style={draw=black,draw opacity=0.5,thick}}
+  \tikzstyle{intersection-point}=[draw=blue,fill=white,fill opacity=0.5,circle,thick,inner sep=2pt]
+  \tikzstyle{valid-line}=[->,green!80!black,thick,draw opacity=0.75]
+
+  % 1. Exact coordinates from the path optimization
+  \coordinate (BS)  at (2, 0, -1.5);
+  \coordinate (pt1) at (0.0555, -3.0016, -0.0077);
+  \coordinate (pt2) at (-0.4415, -2, 0.4415);
+  \coordinate (pt3) at (-4, 0.4635, 0.2838);
+  \coordinate (pt4) at (-0.2714, 3.0449, 0.1186);
+  \coordinate (pt5) at (0.8627, 0.5058, 0.5303);
+  \coordinate (UE)  at (2, 0, 0.5);
+
+  % 2. Plane p1 (x = -4) drawn in the background
+  \fill[wall-surface]
+  (-4, -1, 0) -- (-4, 4, 0) -- (-4, 4, 3) -- (-4, -1, 3) -- cycle;
+  \draw[thick,->] (pt3) -- ++(+1,0,0) node[below] {$\uvec{n}_3$};
+
+  % 3. Sphere s2 (y = 4)
+  \fill[wall-surface] (0, 4, 0) circle (1cm);
+  \draw[canvas is xy plane at z=0,thick,dashed] (0, 4, 0) circle (1cm);
+  \draw[thick,->] (pt1) -- ++($(pt1)+(0,4,0)$) node[right] {$\uvec{n}_1$};
+
+  % 4. CurvyEdge e3 (Helix)
+  \draw[edge, domain=-2:3, samples=100]
+  plot ({cos(\x*180/pi)}, {sin(\x*180/pi)}, {\x});
+  \draw[thick,->] (pt5) -- ++({-0.71*sin(30)},{+0.71*cos(30)},0.71) node[above,xshift=6pt] {$\uvec{e}_5$};
+
+  % 5. Sphere s1 (y = -4) drawn in the foreground
+  \fill[wall-surface] (0, -4, 0) circle (1cm);
+  \draw[canvas is xy plane at z=0,thick,dashed] (0, -4, 0) circle (1cm);
+  \draw[thick,->] (pt4) -- ++($(pt4)+(0,-4,0)$) node[above left] {$\uvec{n}_4$};
+
+  % 6. Edge e2 (Straight line)
+  \draw[edge] (2, -2, -2) -- (-2, -2, 2);
+  \draw[thick,->] (pt2) -- ++(-0.71,0,+0.71) node[above left] {$\uvec{e}_2$};
+
+  % 7. Start (BS) and End (UE) Points
+  \node[point] (BS) at (BS) {};
+  \node[right,xshift=5pt] at (BS) {\glsxtrshort{tx}};
+
+  \node[point] (UE) at (UE) {};
+  \node[left,xshift=-5pt] at (UE) {\glsxtrshort{rx}};
+
+  % 8. Interaction Markers
+  \foreach \p in {pt1, pt2, pt3, pt4, pt5} {
+    \node[intersection-point] (\p) at (\p) {};
+  }
+
+  % 9. The Computed Path
+  \draw[valid-line] (BS) -- (pt1) -- (pt2) -- (pt3) -- (pt4) -- (pt5) -- (UE);
+
+\end{tikzpicture}

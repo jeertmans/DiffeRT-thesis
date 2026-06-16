@@ -1,0 +1,52 @@
+# LaTeX intermediate and output files
+*.acn
+*.acr
+*.alg
+*.aux
+*.auxlock
+*.blg
+*.bbl
+*.bcf
+*.fdb_latexmk
+*.fls
+*.glg
+*.glo
+*.gls
+*.idx
+*.ilg
+*.ind
+*.lof
+*.log
+*.lot
+*.mw
+*.nlo
+*.nls
+*.out
+*.pdf
+*.synctex.gz
+*.toc
+*.xdy
+*.xml
+
+# PDF files
+!images/**/*.pdf
+
+# TikZ externalization files
+tikzexternalize/*
+!tikzexternalize/.gitkeep
+
+# Minted files
+_minted-main/
+*.pyg
+*.tmp
+main.tex
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Pre-trained weights
+*.eqx
+
+# Data
+data/manhattan/

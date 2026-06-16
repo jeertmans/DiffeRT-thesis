@@ -1,0 +1,77 @@
+% Requires:
+% \usepackage{tikz-3dplot}
+% \usepackage{amsmath}
+% \usetikzlibrary{decorations.pathreplacing}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\widehat{\mathbf{#1}}}
+\tdplotsetmaincoords{70}{115}
+\begin{tikzpicture}[tdplot_main_coords, scale=1.2]
+
+  % --- Coordinates & Dimensions ---
+  \coordinate (O) at (0,0,0);
+  \def\gridY{1.5}
+  \def\gridZ{2.0}
+  \def\thick{-0.15} % Thickness of the RIS panel
+
+  % --- RIS Panel (Thickness & Grid) ---
+  % Back face/Thickness lines
+  \begin{scope}[canvas is yz plane at x=\thick]
+    \draw[thick, blue!70!black, fill=blue!5!white] (-\gridY,-\gridZ) rectangle (\gridY,\gridZ);
+  \end{scope}
+  % Connecting edges for 3D effect
+  \draw[thick, blue!70!black] (\thick, -\gridY, \gridZ) -- (0, -\gridY, \gridZ);
+  \draw[thick, blue!70!black] (\thick, \gridY, \gridZ) -- (0, \gridY, \gridZ);
+  \draw[thick, blue!70!black] (\thick, \gridY, -\gridZ) -- (0, \gridY, -\gridZ);
+
+  % Front face & Grid (yz-plane at x=0)
+  \begin{scope}[canvas is yz plane at x=0]
+    \draw[thick, fill=green!15!gray!20!white, fill opacity=0.9] (-\gridY,-\gridZ) rectangle (\gridY,\gridZ);
+    % Vertical grid lines
+    \draw[thick, green!40!black, densely dashed] (-0.5,-\gridZ) -- (-0.5,\gridZ);
+    \draw[thick, green!40!black, densely dashed] (0.5,-\gridZ) -- (0.5,\gridZ);
+    % Horizontal grid lines
+    \draw[thick, green!40!black, densely dashed] (-\gridY,-0.66) -- (\gridY,-0.66);
+    \draw[thick, green!40!black, densely dashed] (-\gridY,0.66) -- (\gridY,0.66);
+  \end{scope}
+
+  % --- Braces for NY and NZ ---
+  \begin{scope}[canvas is yz plane at x=0]
+    \draw[decorate,decoration={brace,amplitude=5pt,mirror},thick,gray]
+    (+\gridY, \gridZ+0.2) -- (-\gridY, \gridZ+0.2) node[midway,above,yshift=6pt] {$N_X$};
+    \draw[decorate,decoration={brace,amplitude=5pt,mirror},thick,gray]
+    (\gridY+0.2, -\gridZ) -- (\gridY+0.2, \gridZ) node[midway,right,xshift=6pt] {$N_Y$};
+    \foreach \dY [count=\nY] in {0,0.66*\gridY,1.33*\gridY} {
+      \foreach \dZ [count=\nZ] in {0,-0.66*\gridZ,-1.33*\gridZ} {
+        \node[transform shape,font=\footnotesize,anchor=north west, text=green!40!black,opacity=0.25] at (-\gridY+\dY, \gridZ+\dZ) {$(\nY, \nZ)$};
+      }
+    }
+    \node[transform shape,font=\footnotesize,anchor=south, text=green!40!black] at (0, {0.5*\gridZ}) {$\Gamma(u,v)$};
+  \end{scope}
+
+  % --- Vectors and Rays ---
+  % Normal vector
+  \draw[->, very thick] (O) -- (1.5,0,0) node[below left] {$\uvec{n}$};
+
+  % Origin dot and label
+  \node[above,yshift=-3pt] at (0,0,0.2) {$\bsup{x}_r$};
+
+  % Incident ray (S) in xy-plane
+  \coordinate (S) at (3.5, 3.5, 0);
+  \draw[thick, ->] (S) -- (O) node[midway, above, sloped] {$\bsup{s}^i$};
+  \node[right] at (S) {Source};
+
+  % Reflected ray (S') in xy-plane
+  \coordinate (Sprime) at (3, -2.5, 0);
+  \draw[->, thick] (O) -- (Sprime) node[midway, below,sloped] {$\bsup{s}^r$};
+  \node[left] at (Sprime) {$\bsup{P}$};
+
+  % --- Angles (drawn in xy-plane since rays are there) ---
+  \begin{scope}[canvas is xy plane at z=0]
+    % Theta_i
+    \draw[->, thick] (.7,0) arc (0:45:.7) node[midway, below, yshift=+0pt, xshift=0pt] {$\theta_i$};
+    % Theta_r
+    \draw[->, thick] (.7,0) arc (0:-40:.7) node[midway, below, yshift=+3pt, xshift=-9pt] {$\theta_r$};
+  \end{scope}
+
+\end{tikzpicture}

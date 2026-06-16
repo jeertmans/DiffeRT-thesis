@@ -1,0 +1,52 @@
+% Requires:
+% \usetikzlibrary{3d}
+% \usetikzlibrary{angles}
+% \usetikzlibrary{bending}
+% \usetikzlibrary{quotes}
+\def\xang{-13}
+\def\zang{45}
+\begin{tikzpicture}[x=(\xang:0.9), y=(90:0.9), z=(\zang:1.1)]
+  \def\xmax{8.0}         % max x axis
+  \def\ymin{-1.5}        % min y axis
+  \def\ymax{1.6}         % max y axis
+  \def\zmax{1.6}         % max z axis
+  \def\xf{1.17*\xmax}    % x position frequency axis
+  \def\A{(0.70*\ymax)}   % amplitude
+  \def\T{(0.335*\xmax)}  % period
+  \def\w{\zmax/11.2}     % spacing components
+  \def\ang{60}           % angle
+  \def\s{\ang/360*\T}    % time component
+  \def\x{\A*cos(\ang)}   % real component
+  \def\y{\A*sin(\ang)}   % imaginary component
+
+  \def\tick#1#2{\draw[thick] (#1) ++ (#2:0.12) --++ (#2-180:0.24)}
+  \def\N{100}
+
+  % Components
+  \draw[->,black,thick] (-0.1*\ymax,0,0) -- (\xmax,0,0) node[below right] {$z$};
+  \draw[->,black,thick] (0,\ymin,0,0) -- (0,\ymax+0.02,0) node[above] {$y$};
+  \draw[->,black,thick] (0,0,-\zmax) -- (0,0,\zmax+0.02) node[above right] {$x$};
+  \foreach \i [evaluate={\tmin=max(-0.05*\T,(\i-0.05)*\T); \tmax=min(0.95*\xmax,(\i+1)*\T);}] in {0,...,2}{
+    \draw[red,very thick,samples=0.4*\N,smooth,variable=\t]
+    plot[domain=\tmin:\tmax](\t,{\A*sin(360/\T*\t)},{0});
+    \draw[blue,very thick,samples=0.4*\N,smooth,variable=\t]
+    plot[domain=\tmin:\tmax](\t,{0},{\A*sin(360/\T*\t)});
+  }
+  \draw[thick] (0,0,{0.9*\A}) -- (0,0,{\A});
+  \tick{{\T},0,0}{90};
+  \tick{{2*\T},0,0}{90};
+  \tick{0,0,{\A}}{90};
+  \tick{0,0,{-\A}}{90};
+  \tick{0,{\A},0}{\zang};
+  \tick{0,{-\A},0}{\zang};
+
+  \begin{scope}[canvas is yz plane at x=0.25*\T,transform shape]
+    \filldraw[gray,opacity=0.3] ({-1.25*\A},{-1.25*\A}) rectangle ({1.25*\A},{1.25*\A});
+    \coordinate (wavefront) at (1,1);
+    \draw[->,thick,blue,dashed] (0,0) -- ++(0,{\A}) coordinate (Ex);
+    \draw[->,thick,red,dashed] (0,0) -- ++({\A},0) coordinate (Hy);
+  \end{scope}
+  \draw[<-,thick] (wavefront) to[out=0,in=180] ++(1,+.5) node[right] {Wavefront};
+  \node[above right,blue,font=\footnotesize] at (Ex) {$E_x$};
+  \node[above,red,font=\footnotesize] at (Hy) {$H_y$};
+\end{tikzpicture}

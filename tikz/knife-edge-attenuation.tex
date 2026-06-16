@@ -1,0 +1,20 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{siunitx}
+% INCLUDE ../data/knife-edge-attenuation.txt relto ../main.tex
+\begin{tikzpicture}
+  \begin{axis}[
+      xlabel={Diffraction parameter $\nu$},
+      ylabel={Attenuation $L_{ke}(\nu)$ (\unit{\decibel})},
+      width=8.5cm,
+      ytick={-5, 0, 5, 10, 15, 20, 25},
+      xmin=-3, xmax=3,
+      ymin=-5, ymax=25,
+      grid=major,
+      declare function={f(\x)=20*log10(pi*\x*sqrt(2));},
+    ]
+    \addplot[blue, thick] table [col sep=comma, x=nu, y=L] {data/knife-edge-attenuation.txt};
+    \addplot[dashed, red, thick, domain=0.5:3] {f(\x)} coordinate[pos=0.2] (approx);
+    \draw[<-,thick,red] (approx) -- (axis cs:0,15) node[above left] {$-20\log_{10}\frac{1}{\pi\nu\sqrt{2}}$};
+  \end{axis}
+\end{tikzpicture}

@@ -1,0 +1,64 @@
+% Requires:
+% \usetikzlibrary{angles}
+% \usetikzlibrary{bending}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{intersections}
+% \usetikzlibrary{quotes}
+% \usetikzlibrary{shapes.misc}
+\begin{tikzpicture}
+  % Coordinates
+  \coordinate (Tx) at (0, 1.5);
+  \coordinate (Rx) at (6, 0.5);
+  \coordinate (GroundEdge) at (3, 0);
+  \coordinate (Edge) at (3, 2.5);
+
+  % Tx and Rx Marks
+  \draw[thick] (Tx) node[cross out, draw, inner sep=2pt, thick] {};
+  \node[below=1em] at (Tx) {Transmitter};
+  \draw[thick] (Rx) node[cross out, draw, inner sep=2pt, thick] {};
+  \node[below=1em] at (Rx) {Receiver};
+
+  % Direct and Diffracted Paths
+  \draw[thick, dashed,opacity=0.5] (Tx) -- (Rx);
+  \draw[thick] (Tx) -- (Edge) -- (Rx);
+
+  % Knife-Edge
+  \draw[ultra thick] (3, 0.0) -- (Edge);
+  \node[above] at (Edge) {Edge};
+
+  % Draw horizontal line for angles
+  \draw[densely dashed,opacity=0.75] (Tx) -- ++(0.90, 0) coordinate (LineTx);
+  \draw[densely dashed,opacity=0.75] (Rx) -- ++(-.60, 0) coordinate (LineRx);
+  \draw[dashed,opacity=0.75] (Edge) -- ($(Tx)!1.25!(Edge)$) coordinate (TxExt);
+
+  % Angles
+  \draw pic[-{>[flex'=1]},draw,angle radius=14,angle eccentricity=1,
+  "$\alpha=\beta+\gamma$"{above=0.1,right,font=\footnotesize}]
+  {angle = Rx--Edge--TxExt};
+  \draw pic[-{>[flex'=1]},draw,angle radius=25,angle eccentricity=1,
+  "$\beta$"{right,font=\footnotesize}]
+  {angle = LineTx--Tx--Edge};
+  \draw pic[-{>[flex'=1]},draw,angle radius=16,angle eccentricity=1,
+  "$\gamma$"{above=0.08cm,left,font=\footnotesize}]
+  {angle = Edge--Rx--LineRx};
+
+  % h parameter
+  \draw[|<->|] (3.2, 0) -- (3.2, 2.5) node[midway, right] {$h$};
+  % intersection of indirect edge and direct line
+  \path[name path=direct] (Tx) -- (Rx);
+  \path[name path=knife] (3, -0.5) -- (3, 3);
+  \path [name intersections={of=direct and knife, by=hprimebase}];
+
+  \draw[dashed,opacity=0.5] ($(Tx)!(Edge)!(Rx)$) coordinate (Proj) -- (Edge);
+  \coordinate (lefthp) at ($(Rx)!1.07!(Proj)$);
+  \draw[|<->|] (lefthp) -- ++($(Edge)-(Proj)$) node[midway, left] {$h'$};
+
+  \coordinate (belowhp) at ($(Edge)!1.1!(Proj)$);
+  \draw[|<->|] (belowhp) -- ++($(Tx)-(Proj)$) node[below,midway,sloped,font=\footnotesize] {$d_1'$};
+  \coordinate (belowhp2) at ($(Edge)!1.1!(Proj)$);
+  \draw[|<->|] (belowhp2) -- ++($(Rx)-(Proj)$) node[below,midway,sloped,font=\footnotesize] {$d_2'$};
+
+  \draw[|<->|] (0, -0.6) -- (3, -0.6) node[midway, fill=white,font=\footnotesize] {$d_1$};
+  \draw[|<->|] (3, -0.6) -- (6, -0.6) node[midway, fill=white,font=\footnotesize] {$d_2$};
+
+\end{tikzpicture}

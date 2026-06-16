@@ -1,0 +1,69 @@
+% Requires:
+% \usepackage{pgfplots}
+% \pgfplotsset{compat=1.18}
+% \providecommand{\glsxtrshort}[1]{#1}
+% INCLUDE ../data/study-model-embeddings/probability_vectors_basic_order2.txt relto ../main.tex
+% INCLUDE ../data/study-model-embeddings/probability_vectors_swapped_order2.txt relto ../main.tex
+\begin{tikzpicture}
+
+  \begin{axis}[
+      name=leftplot,
+      title={Basic scene},
+      colormap name=viridis,
+      xlabel={Objects},
+      ylabel={Interaction\\index},
+      ylabel style={align=center},
+      point meta min=0.0,
+      point meta max=1.0,
+      width=4cm, height=1.2cm,
+      scale only axis,
+      ytick={0, 1},
+      yticklabels={{0}, {1}},
+      xtick={5.50, 17.50, 29.50, 41.50, 53.50, 60.50},
+      xticklabels={{Building 1}, {Building 2}, {Building 3}, {Building 4}, {Building 5}, {Floor}},
+      xticklabel style={rotate=45, anchor=east, font=\footnotesize},
+      ymin=-0.5, ymax={1.5},
+      enlargelimits=false,
+    ]
+    \addplot [matrix plot, mesh/cols=62, point meta=explicit] table [x=col, y=row, meta=val] {data/study-model-embeddings/probability_vectors_basic_order2.txt};
+    \draw [white, dashed, opacity=0.7] (axis cs:11.5, \pgfkeysvalueof{/pgfplots/ymin}) -- (axis cs:11.5, \pgfkeysvalueof{/pgfplots/ymax});
+    \draw [white, dashed, opacity=0.7] (axis cs:23.5, \pgfkeysvalueof{/pgfplots/ymin}) -- (axis cs:23.5, \pgfkeysvalueof{/pgfplots/ymax});
+    \draw [white, dashed, opacity=0.7] (axis cs:35.5, \pgfkeysvalueof{/pgfplots/ymin}) -- (axis cs:35.5, \pgfkeysvalueof{/pgfplots/ymax});
+    \draw [white, dashed, opacity=0.7] (axis cs:47.5, \pgfkeysvalueof{/pgfplots/ymin}) -- (axis cs:47.5, \pgfkeysvalueof{/pgfplots/ymax});
+    \draw [white, dashed, opacity=0.7] (axis cs:59.5, \pgfkeysvalueof{/pgfplots/ymin}) -- (axis cs:59.5, \pgfkeysvalueof{/pgfplots/ymax});
+    \draw [red, thick] (axis cs:26.5, -0.5) rectangle (axis cs:27.5, 0.5);
+    \draw [red, thick] (axis cs:59.5, 0.5) rectangle (axis cs:60.5, 1.5);
+  \end{axis}
+
+  \begin{axis}[
+      name=rightplot,
+      at={(leftplot.outer east)},
+      anchor=outer west,
+      xshift=0.2cm,
+      title={\glsxtrshort{tx}--\glsxtrshort{rx} swapped},
+      colormap name=viridis,
+      xlabel={Objects},
+      colorbar,
+      colorbar style={height=2.0cm, at={(1.12, 0.5)}, anchor=west},
+      point meta min=0.0,
+      point meta max=1.0,
+      width=4cm, height=1.2cm,
+      scale only axis,
+      ytick={0, 1},
+      xtick={5.50, 17.50, 29.50, 41.50, 53.50, 60.50},
+      xticklabels={{Building 1}, {Building 2}, {Building 3}, {Building 4}, {Building 5}, {Floor}},
+      xticklabel style={rotate=45, anchor=east, font=\footnotesize},
+      ymin=-0.5, ymax={1.5},
+      yticklabels=\empty,
+      enlargelimits=false,
+    ]
+    \addplot [matrix plot, mesh/cols=62, point meta=explicit] table [x=col, y=row, meta=val] {data/study-model-embeddings/probability_vectors_swapped_order2.txt};
+    \draw [white, dashed, opacity=0.7] (axis cs:11.5, \pgfkeysvalueof{/pgfplots/ymin}) -- (axis cs:11.5, \pgfkeysvalueof{/pgfplots/ymax});
+    \draw [white, dashed, opacity=0.7] (axis cs:23.5, \pgfkeysvalueof{/pgfplots/ymin}) -- (axis cs:23.5, \pgfkeysvalueof{/pgfplots/ymax});
+    \draw [white, dashed, opacity=0.7] (axis cs:35.5, \pgfkeysvalueof{/pgfplots/ymin}) -- (axis cs:35.5, \pgfkeysvalueof{/pgfplots/ymax});
+    \draw [white, dashed, opacity=0.7] (axis cs:47.5, \pgfkeysvalueof{/pgfplots/ymin}) -- (axis cs:47.5, \pgfkeysvalueof{/pgfplots/ymax});
+    \draw [white, dashed, opacity=0.7] (axis cs:59.5, \pgfkeysvalueof{/pgfplots/ymin}) -- (axis cs:59.5, \pgfkeysvalueof{/pgfplots/ymax});
+    \draw [red, thick] (axis cs:50.5, -0.5) rectangle (axis cs:51.5, 0.5);
+    \draw [red, thick] (axis cs:6.5, 0.5) rectangle (axis cs:7.5, 1.5);
+  \end{axis}
+\end{tikzpicture}

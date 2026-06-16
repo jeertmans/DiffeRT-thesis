@@ -1,0 +1,394 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{pgfplots}
+% \usepackage{pgfplotstable}
+% \usepackage{siunitx}
+% \usetikzlibrary{calc}
+% \providecommand{\bsit}[1]{\boldsymbol{#1}}
+% \providecommand{\glsxtrshort}[1]{#1}
+% INCLUDE ../data/fpt/perf_diff_1d.txt relto ../main.tex
+% INCLUDE ../data/fpt/perf_diff_2d.txt relto ../main.tex
+% INCLUDE ../data/fpt/perf_refl_2d.txt relto ../main.tex
+% INCLUDE ../data/fpt/perf_mixed_2d.txt relto ../main.tex
+\begin{tikzpicture}[every plot/.append style={mark repeat=10},every
+  mark/.append style={opacity=0.7}]
+  \newcommand{\plotwidth}{3.6cm}
+  \newcommand{\plotheight}{4.0cm}
+
+  \pgfplotscreateplotcyclelist{custom color cycle}{
+    blue,every mark/.append style={fill=blue,draw=blue},mark=*\\
+    blue,densely dashed,every mark/.append style={solid,fill=blue,draw=blue,fill opacity=0.25},mark=*\\
+    red!20!black,every mark/.append style={fill=red,draw=red!20!black},mark=otimes*\\
+    red!20!black,densely dashed,every mark/.append style={solid,fill=red,draw=red!20!black,fill opacity=0.25},mark=otimes*\\
+    orange,every mark/.append style={fill=orange,draw=orange},mark=triangle*\\
+    green!80!black,every mark/.append style={fill=green!80!black,draw=green!80!black},mark=diamond*\\
+    violet,every mark/.append style={fill=violet,draw=violet},mark=pentagon*\\
+  }
+
+  % Diffractions
+  \pgfplotstableread[col sep=comma]{data/fpt/perf_diff_1d.txt}\mydataoned;
+  \pgfplotstableread[col sep=comma]{data/fpt/perf_diff_2d.txt}\mydatatwod;
+
+  \begin{axis}[
+      unbounded coords=jump,
+      name=plot1a,
+      width=\plotwidth,
+      height=\plotheight,
+      xtick pos=left,
+      xticklabels=\empty,
+      ytick={1e-6,1e-3,1e0},
+      ymin=1e-7,ymax=1e1,
+      xtick={1e0,1e1},
+      xmin=3e-1, xmax=3e1,
+      xmode=log,
+      ymode=log,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x expr=\thisrow{t_ours_1} * 1000,y=e_ours_1] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours_1} * 1000,y=e_ours_1] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_ours-64_1} *
+    1000,y=e_ours-64_1] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours-64_1} *
+    1000,y=e_ours-64_1] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_gd_1} * 1000,y=e_gd_1] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_malbani_1} *
+    1000,y=e_malbani_1] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_l-bfgs_1} * 1000,y=e_l-bfgs_1]
+    {\mydataoned};
+  \end{axis}
+
+  \begin{axis}[
+      unbounded coords=jump,
+      name=plot2a,
+      at={($ (.1cm,0cm) + (plot1a.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xtick pos=left,
+      xticklabels=\empty,
+      yticklabels=\empty,
+      ytick={1e-6,1e-3,1e0},
+      ymin=1e-7,ymax=1e1,
+      xtick={1e0,1e1},
+      xmin=3e-1, xmax=3e1,
+      xmode=log,
+      ymode=log,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x expr=\thisrow{t_ours_2} * 1000,y=e_ours_2] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours_2} * 1000,y=e_ours_2] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_ours-64_2} *
+    1000,y=e_ours-64_2] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours-64_2} *
+    1000,y=e_ours-64_2] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_gd_2} * 1000,y=e_gd_2] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_malbani_2} *
+    1000,y=e_malbani_2] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_l-bfgs_2} * 1000,y=e_l-bfgs_2]
+    {\mydataoned};
+  \end{axis}
+
+  \begin{axis}[
+      unbounded coords=jump,
+      name=plot3a,
+      at={($ (.1cm,0cm) + (plot2a.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xtick pos=left,
+      xticklabels=\empty,
+      yticklabels=\empty,
+      ytick={1e-6,1e-3,1e0},
+      ymin=1e-7,ymax=1e1,
+      xtick={1e0,1e1},
+      xmin=3e-1, xmax=3e1,
+      xmode=log,
+      ymode=log,
+      legend style={at={(0.5,1.05)},anchor=south,name=leg,nodes={anchor=base}},
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+      legend columns=-1,legend style={column sep=0.5ex},
+      legend image post style={yshift=.5ex},
+      every legend to name picture/.style={
+        baseline={(leg.base)},
+      },
+    ]
+    \addlegendimage{only marks,mark=*,mark options={draw=blue,fill=blue,opacity=0.7}}
+    \addlegendimage{only marks,mark=otimes*,mark options={draw=red!20!black,fill=red,opacity=0.7}}
+    \addlegendimage{no marks,draw=black!80!white,opacity=0.5,ultra thick,dashed}
+    \addlegendimage{only marks,mark=triangle*,mark options={draw=orange,fill=orange,opacity=0.7}}
+    \addlegendimage{only marks,mark=diamond*,mark options={draw=green!80!black,fill=green!80!black,opacity=0.7}}
+    \addlegendimage{only marks,mark=pentagon*,mark options={draw=violet,fill=violet,opacity=0.7}}
+    \legend{JE,JE-64,\glsxtrshort{im},\glsxtrshort{gd},\glsxtrshort{ca},\glsxtrshort{lbfgs}}
+    \addplot table [x expr=\thisrow{t_ours_3} * 1000,y=e_ours_3] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours_3} * 1000,y=e_ours_3] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_ours-64_3} *
+    1000,y=e_ours-64_3] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours-64_3} *
+    1000,y=e_ours-64_3] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_gd_3} * 1000,y=e_gd_3] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_malbani_3} *
+    1000,y=e_malbani_3] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_l-bfgs_3} * 1000,y=e_l-bfgs_3]
+    {\mydataoned};
+  \end{axis}
+
+  \begin{axis}[
+      unbounded coords=jump,
+      name=plot4a,
+      at={($ (.1cm,0cm) + (plot3a.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xtick pos=left,
+      xticklabels=\empty,
+      yticklabels=\empty,
+      ytick={1e-6,1e-3,1e0},
+      ymin=1e-7,ymax=1e1,
+      xtick={1e0,1e1},
+      xmin=3e-1, xmax=3e1,
+      xmode=log,
+      ymode=log,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x expr=\thisrow{t_ours_4} * 1000,y=e_ours_4] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours_4} * 1000,y=e_ours_4] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_ours-64_4} *
+    1000,y=e_ours-64_4] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours-64_4} *
+    1000,y=e_ours-64_4] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_gd_4} * 1000,y=e_gd_4] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_malbani_4} *
+    1000,y=e_malbani_4] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_l-bfgs_4} * 1000,y=e_l-bfgs_4]
+    {\mydataoned};
+  \end{axis}
+
+  \begin{axis}[
+      unbounded coords=jump,
+      name=plot5a,
+      at={($ (.1cm,0cm) + (plot4a.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xtick pos=left,
+      xticklabels=\empty,
+      yticklabels=\empty,
+      ytick={1e-6,1e-3,1e0},
+      ymin=1e-7,ymax=1e1,
+      xtick={1e0,1e1},
+      xmin=3e-1, xmax=3e1,
+      xmode=log,
+      ymode=log,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x expr=\thisrow{t_ours_5} * 1000,y=e_ours_5] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours_5} * 1000,y=e_ours_5] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_ours-64_5} *
+    1000,y=e_ours-64_5] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours-64_5} *
+    1000,y=e_ours-64_5] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_gd_5} * 1000,y=e_gd_5] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_malbani_5} *
+    1000,y=e_malbani_5] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_l-bfgs_5} * 1000,y=e_l-bfgs_5]
+    {\mydataoned};
+  \end{axis}
+
+  \node[draw,fill=black!10,anchor=north east,inner
+  sep=2pt] at ($ (-.05cm,-.05cm) + (plot1a.north east) $) {$n=1$};
+  \node[draw,fill=black!10,anchor=north east,inner
+  sep=2pt] at ($ (-.05cm,-.05cm) + (plot2a.north east) $) {$n=2$};
+  \node[draw,fill=black!10,anchor=north east,inner
+  sep=2pt] at ($ (-.05cm,-.05cm) + (plot3a.north east) $) {$n=3$};
+  \node[draw,fill=black!10,anchor=north east,inner
+  sep=2pt] at ($ (-.05cm,-.05cm) + (plot4a.north east) $) {$n=4$};
+  \node[draw,fill=black!10,anchor=north east,inner
+  sep=2pt] at ($ (-.05cm,-.05cm) + (plot5a.north east) $) {$n=5$};
+
+  % Reflections
+  \pgfplotstableread[col sep=comma]{data/fpt/perf_refl_2d.txt}\mydataoned;
+  \pgfplotstableread[col sep=comma]{data/fpt/perf_mixed_2d.txt}\mydatatwod;
+
+  \begin{axis}[
+      unbounded coords=jump,
+      name=plot1b,
+      anchor=north,
+      at={($ (0cm,-.3cm) + (plot1a.south) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xtick pos=left,
+      ytick={1e-4,1e-2,1e0},
+      ymin=1e-5,ymax=1e1,
+      xtick={1e0,1e1},
+      xticklabels={1,10},
+      xmin=3e-1, xmax=3e1,
+      xmode=log,
+      ymode=log,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x expr=\thisrow{t_ours_1} * 1000,y=e_ours_1] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours_1} * 1000,y=e_ours_1] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_ours-64_1} *
+    1000,y=e_ours-64_1] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours-64_1} *
+    1000,y=e_ours-64_1] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_gd_1} * 1000,y=e_gd_1] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_malbani_1} *
+    1000,y=e_malbani_1] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_l-bfgs_1} * 1000,y=e_l-bfgs_1]
+    {\mydataoned};
+    \draw[black!80!white,opacity=0.5,ultra thick,dashed] (current
+    axis.south-|0.454, 0) -- (current axis.north-|0.454,0);
+  \end{axis}
+
+  \begin{axis}[
+      unbounded coords=jump,
+      name=plot2b,
+      at={($ (.1cm,0cm) + (plot1b.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xtick pos=left,
+      yticklabels=\empty,
+      ytick={1e-4,1e-2,1e0},
+      ymin=1e-5,ymax=1e1,
+      xtick={1e0,1e1},
+      xticklabels={1,10},
+      xmin=3e-1, xmax=3e1,
+      xmode=log,
+      ymode=log,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x expr=\thisrow{t_ours_2} * 1000,y=e_ours_2] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours_2} * 1000,y=e_ours_2] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_ours-64_2} *
+    1000,y=e_ours-64_2] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours-64_2} *
+    1000,y=e_ours-64_2] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_gd_2} * 1000,y=e_gd_2] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_malbani_2} *
+    1000,y=e_malbani_2] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_l-bfgs_2} * 1000,y=e_l-bfgs_2]
+    {\mydataoned};
+    \draw[black!80!white,opacity=0.5,ultra thick,dashed] (current
+    axis.south-|0.492, 0) -- (current axis.north-|0.492,0);
+  \end{axis}
+
+  \begin{axis}[
+      unbounded coords=jump,
+      name=plot3b,
+      at={($ (.1cm,0cm) + (plot2b.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xlabel={Execution time (\unit{\milli\second})},
+      xlabel style={yshift=2pt},
+      xtick pos=left,
+      yticklabels=\empty,
+      ytick={1e-4,1e-2,1e0},
+      ymin=1e-5,ymax=1e1,
+      xtick={1e0,1e1},
+      xticklabels={1,10},
+      xmin=3e-1, xmax=3e1,
+      xmode=log,
+      ymode=log,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x expr=\thisrow{t_ours_3} * 1000,y=e_ours_3] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours_3} * 1000,y=e_ours_3] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_ours-64_3} *
+    1000,y=e_ours-64_3] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours-64_3} *
+    1000,y=e_ours-64_3] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_gd_3} * 1000,y=e_gd_3] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_malbani_3} *
+    1000,y=e_malbani_3] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_l-bfgs_3} * 1000,y=e_l-bfgs_3]
+    {\mydataoned};
+    \draw[black!80!white,opacity=0.5,ultra thick,dashed] (current
+    axis.south-|0.508, 0) -- (current axis.north-|0.508,0);
+  \end{axis}
+
+  \begin{axis}[
+      unbounded coords=jump,
+      name=plot4b,
+      at={($ (.1cm,0cm) + (plot3b.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xtick pos=left,
+      yticklabels=\empty,
+      ytick={1e-4,1e-2,1e0},
+      ymin=1e-5,ymax=1e1,
+      xtick={1e0,1e1},
+      xticklabels={1,10},
+      xmin=3e-1, xmax=3e1,
+      xmode=log,
+      ymode=log,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x expr=\thisrow{t_ours_4} * 1000,y=e_ours_4] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours_4} * 1000,y=e_ours_4] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_ours-64_4} *
+    1000,y=e_ours-64_4] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours-64_4} *
+    1000,y=e_ours-64_4] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_gd_4} * 1000,y=e_gd_4] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_malbani_4} *
+    1000,y=e_malbani_4] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_l-bfgs_4} * 1000,y=e_l-bfgs_4]
+    {\mydataoned};
+    \draw[black!80!white,opacity=0.5,ultra thick,dashed] (current
+    axis.south-|0.524, 0) -- (current axis.north-|0.524,0);
+  \end{axis}
+
+  \begin{axis}[
+      unbounded coords=jump,
+      name=plot5b,
+      at={($ (.1cm,0cm) + (plot4b.south east) $)},
+      width=\plotwidth,
+      height=\plotheight,
+      xtick pos=left,
+      yticklabels=\empty,
+      ytick={1e-4,1e-2,1e0},
+      ymin=1e-5,ymax=1e1,
+      xtick={1e0,1e1},
+      xticklabels={1,10},
+      xmin=3e-1, xmax=3e1,
+      xmode=log,
+      ymode=log,
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+    ]
+    \addplot table [x expr=\thisrow{t_ours_5} * 1000,y=e_ours_5] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours_5} * 1000,y=e_ours_5] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_ours-64_5} *
+    1000,y=e_ours-64_5] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_ours-64_5} *
+    1000,y=e_ours-64_5] {\mydatatwod};
+    \addplot table [x expr=\thisrow{t_gd_5} * 1000,y=e_gd_5] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_malbani_5} *
+    1000,y=e_malbani_5] {\mydataoned};
+    \addplot table [x expr=\thisrow{t_l-bfgs_5} * 1000,y=e_l-bfgs_5]
+    {\mydataoned};
+    \draw[black!80!white,opacity=0.5,ultra thick,dashed] (current
+    axis.south-|0.544, 0) -- (current axis.north-|0.544,0);
+  \end{axis}
+
+  \node[draw,fill=black!10,anchor=south west,inner
+  sep=2pt] at ($ (+.05cm,+.05cm) + (plot1b.south west) $) {$n=1$};
+  \node[draw,fill=black!10,anchor=south west,inner
+  sep=2pt] at ($ (+.05cm,+.05cm) + (plot2b.south west) $) {$n=2$};
+  \node[draw,fill=black!10,anchor=south west,inner
+  sep=2pt] at ($ (+.05cm,+.05cm) + (plot3b.south west) $) {$n=3$};
+  \node[draw,fill=black!10,anchor=south west,inner
+  sep=2pt] at ($ (+.05cm,+.05cm) + (plot4b.south west) $) {$n=4$};
+  \node[draw,fill=black!10,anchor=south west,inner
+  sep=2pt] at ($ (+.05cm,+.05cm) + (plot5b.south west) $) {$n=5$};
+
+  \path (plot1a.north west) -- (plot1b.south) coordinate[pos=0.5] (ylabel);
+  \path (ylabel) -- ++(-45pt,0cm)
+  node[rotate=90,anchor=south,inner sep=0pt] {Average error on $\bsit{X}^\star$};
+\end{tikzpicture}

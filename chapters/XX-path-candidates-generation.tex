@@ -1,0 +1,205 @@
+\chapter{Generating Path Candidates}\labappendix{path_candidates}
+
+As discussed in \refch{path-tracing} and \refappendix{tutorial}, deterministic (exact) ray tracing can be decomposed into two tasks: generating path candidates and then solving for the exact coordinates of each candidate. As a reminder, a path candidate is an ordered interaction sequence between a \glsxtrshort{tx} and an \glsxtrshort{rx}; geometric validity is verified only afterward (see \refsec{combinatorial-bottleneck}).
+
+To optimize this computationally intensive process, modern differentiable ray tracers such as DiffeRT and Sionna~RT usually partition it into two stages:
+\begin{enumerate}
+  \item \emph{Candidate generation}, to identify ordered sequences of primitives (e.g., triangles) that a ray could potentially traverse.
+  \item \emph{Path tracing}, to compute the exact coordinate path for each sequence.
+\end{enumerate}
+
+This appendix focuses only on the first stage: path candidate generation. In this formulation, listing candidates is equivalent to enumerating paths in a directed graph that connects scene objects with the \glsxtrshort{tx} and \glsxtrshort{rx} nodes, as illustrated in \reffig{path-candidates-graph} in \refch{path-tracing}.
+
+\section{Scene with Known Visibility}
+
+Let us consider again the simple 2D scene in \reffig{path-candidate-visibility-bis}. In preprocessed environments or simplified geometries, visibility between objects may be known or trivially computed.
+
+\begin{figure}[htpb]
+  \centering
+  \inputtikz{path-candidate-visibility}
+  \caption{2D scenario with triangular-shaped objects on which reflection or diffraction can occur, repeated here for convenience from \reffig{path-candidate-visibility}. Surfaces are colored black and edges are colored \textcolor{red}{red}.}
+  \labfig{path-candidate-visibility-bis}
+\end{figure}
+
+This visibility is encoded as an adjacency matrix (visibility matrix), consistent with what we saw in \refch{efficient-path-tracing}. A value of one indicates an unobstructed \gls{line-of-sight} between two graph nodes.
+
+\begin{figure}[htpb]
+  \centering
+  \begin{equation*}
+    %\resizebox{.5\textwidth}{!}{
+    \renewcommand{\arraystretch}{.6}
+    %\setlength{\bigstrutjot}{2ex}
+    \makeatletter\setlength\BA@colsep{3pt}\makeatother
+    \begin{blockarray}{ccccccccccccccc}
+      & \text{\glsxtrshort{tx}} & s_1 & s_2 & s_3 & s_4 & s_5 & s_6 & e_1 & e_2 & e_3 & e_4 & e_5 & e_6 & \text{\glsxtrshort{rx}}\\
+      \begin{block}{c(>{\medspace}c|cccccc|cccccc|c<{\medspace})}
+        \text{\glsxtrshort{tx}} & {} & 1 & {} & {} & {} & {} & 1 & 1 & 1 & {} & 1 & {} & 1 & 1\\
+        \BAhhline{~~------------~}
+        s_1 & {} & {} & {} & {} & {} & {} & \bsit{1} & {} & {} & {} & \bsit{1} & {} & & {} & {}\\ %s1
+        s_2 & {} & {} & {} & {} & {} & {} & \bsit{1} & {} & {} & {} & \bsit{1} & {} & \bsit{1} & 1\\ %s2
+        s_3 & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {}\\ %s3
+        s_4 & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {}\\ %s4
+        s_5 & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {}\\ %s5
+        s_6 & {} & \bsit{1} & \bsit{1} & {} & {} & {} & {} & \bsit{1} & \bsit{1} & \bsit{1} & {} & {} & {} & 1\\ % s6
+        e_1 & {} & {} & {} & {} & {} & {} & \bsit{\color{red}1} & {} & {} & {} & \bsit{\color{red}1} & {} & {} & {}\\ % e1
+        e_2 & {} & {} & {} & {} & {} & {} & \bsit{\color{red}1} & {} & {} & {} & \bsit{\color{red}1} & {} & \bsit{\color{red}1} & 1\\ %e2
+        e_3 & {} & {} & {} & {} & {} & {} & \bsit{\color{red}1} & {} & {} & {} & \bsit{\color{red}1} & {} & \bsit{\color{red}1} & 1\\ %e3
+        e_4 & {} & \bsit{\color{red}1} & \bsit{\color{red}1} & {} & {} & {} & {} & \bsit{\color{red}1} & \bsit{\color{red}1} & \bsit{\color{red}1} & {} & {} & {} & 1 \\ %e4
+        e_5 & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {}\\ %e5
+        e_6 & {} & {} & \bsit{\color{red}1} & {} & {} & {} & {} & {} & \bsit{\color{red}1} & \bsit{\color{red}1} & {} & {} & {} & 1\\
+        \BAhhline{~~------------~}
+        \text{\glsxtrshort{rx}} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {}\\
+      \end{block}
+    \end{blockarray}
+    %}
+  \end{equation*}
+  \caption{Adjacency matrix, $\mathcal{G}$, generated from the scenario illustrated in \reffig{path-candidate-visibility-bis}, repeated here for convenience from \reffig{visibility-adjacency-matrix}. Each row of this $14 \times 14$ matrix refers to the visible objects as seen from the corresponding object. For readability, zeros are omitted. The black coefficients indicate a possible reflection, while the \textcolor{red}{red} ones indicate diffraction.}
+  \labfig{visibility-adjacency-matrix-bis}
+\end{figure}
+
+If we omit the endpoint nodes (\glsxtrshort{tx} and \glsxtrshort{rx}), the matrix becomes symmetric because pairwise \gls{line-of-sight} visibility is bidirectional. Endpoint-specific visibility maps are shown in \reffig{path-candidate-visibility-from-bis}.
+
+\begin{figure*}[htpb]
+  \centering
+  \begin{subfigure}{0.49\contentwidth}
+    \centering
+    \inputtikz{path-candidate-visibility-from-tx}
+    \caption{Objects visible from \glsxtrshort{tx}.}
+    \labfig{path-candidate-visibility-from-tx-bis}
+  \end{subfigure}
+  \begin{subfigure}{0.49\contentwidth}
+    \centering
+    \inputtikz{path-candidate-visibility-from-rx}
+    \caption{Objects visible from \glsxtrshort{rx}.}
+    \labfig{path-candidate-visibility-from-rx-bis}
+  \end{subfigure}
+  \caption{Example 2D visibility for the \glsxtrfull{tx} and \glsxtrfull{rx}, repeated here for convenience from \reffig{path-candidate-visibility-from}. Objects are faded if they are not visible from the corresponding node.}
+  \labfig{path-candidate-visibility-from-bis}
+\end{figure*}
+
+Using a directed graph (\texttt{DiGraph} in DiffeRT's core library), we build the interaction graph from this adjacency matrix and enumerate candidates between the \glsxtrshort{tx} and the \glsxtrshort{rx}. Because the matrix is sparse, the candidate set is typically much smaller than in a complete-graph model.
+
+\begin{listing*}[htpb]
+  \caption{Constructing a directed graph from a known visibility matrix.}
+  \lablisting{adjacency-matrix}
+  \inputmintedmarker[]{python}{codes/wide/path-candidates.py}{adjacency_matrix}
+\end{listing*}
+
+\begin{listing}[htpb]
+  \caption{Enumerating known-visibility path candidates with \texttt{DiGraph}.}
+  \lablisting{graph-known-visibility}
+  \inputmintedmarker[]{python}{codes/wide/path-candidates.py}{enumerate_paths_di_graph}
+\end{listing}
+
+The output from \reflisting{graph-known-visibility} is shown in \reflisting{graph-known-visibility-output}.
+\begin{listing}[htpb]
+  \caption{Output from \reflisting{graph-known-visibility}.}
+  \lablisting{graph-known-visibility-output}
+\begin{minted}{text}
+#001: [ 0  1  6 13]
+#002: [ 0  1 10 13]
+#003: [ 0  6  2 13]
+#004: [ 0  6  8 13]
+#005: [ 0  6  9 13]
+#006: [ 0  7  6 13]
+#007: [ 0  7 10 13]
+#008: [ 0  8  6 13]
+#009: [ 0  8 10 13]
+#010: [ 0  8 12 13]
+#011: [ 0 10  2 13]
+#012: [ 0 10  8 13]
+#013: [ 0 10  9 13]
+#014: [ 0 12  2 13]
+#015: [ 0 12  8 13]
+#016: [ 0 12  9 13]
+\end{minted}
+\end{listing}
+
+\section{Scene with Unknown Visibility}
+
+In many practical scenarios, exact visibility preprocessing is costly, especially in dense 3D environments (see \refch{efficient-path-tracing}).
+
+Consequently, one may assume that every object can connect to every other object, i.e., a \emph{complete graph}. This is a worst-case candidate generator: it is simple and highly parallel, but it deliberately over-generates candidates that must later be rejected by geometric validity checks (\refsec{combinatorial-bottleneck}).
+
+DiffeRT adopts this approach through the \texttt{CompleteGraph} class, which generates path indices an order of magnitude faster than an equivalent \texttt{DiGraph}. However, when modeling the \glsxtrshort{tx} and the \glsxtrshort{rx}, we generally do not want these terminal nodes to appear multiple times in a path: \glsxtrshort{tx} should only originate paths, and no node should connect back to \glsxtrshort{tx}. Similarly, \glsxtrshort{rx} should only terminate paths. To model this behavior with \texttt{CompleteGraph}, one must:
+\begin{enumerate}
+  \item Initialize a complete graph strictly \emph{without} the \glsxtrshort{tx} and the \glsxtrshort{rx} nodes.
+  \item Generate path permutations programmatically (via \texttt{all\_paths}), specifying that the respective start and terminal indices (\texttt{from\_} and \texttt{to}) fall outside the graph's core logic.
+\end{enumerate}
+Because the implementation is optimized for complete graphs, it assumes that \texttt{from\_} is connected to all nodes in the graph, and symmetrically, that any node can connect to \texttt{to}.
+
+\begin{listing}[htpb]
+  \caption{Generating paths using \texttt{CompleteGraph} under unknown visibility assumptions.}
+  \lablisting{graph-unknown-visibility}
+  \inputmintedmarker[]{python}{codes/wide/path-candidates.py}{enumerate_paths_complete_graph}
+\end{listing}
+
+The (truncated) output from \reflisting{graph-unknown-visibility} is shown in \reflisting{graph-unknown-visibility-output}. Note that the candidate set is much larger than in the \texttt{DiGraph} case (132 candidates vs. 16).
+
+\begin{listing}[htpb]
+  \caption{Output from \reflisting{graph-unknown-visibility}.}
+  \lablisting{graph-unknown-visibility-output}
+\begin{minted}{text}
+#001: [12  0  1 13]
+#002: [12  0  2 13]
+#003: [12  0  3 13]
+#004: [12  0  4 13]
+#005: [12  0  5 13]
+#006: [12  0  6 13]
+#007: [12  0  7 13]
+#008: [12  0  8 13]
+#009: [12  0  9 13]
+#010: [12  0 10 13]
+#011: [12  0 11 13]
+#012: [12  1  0 13]
+% ... 108 intermediate paths omitted ...
+#121: [12 10 11 13]
+#122: [12 11  0 13]
+#123: [12 11  1 13]
+#124: [12 11  2 13]
+#125: [12 11  3 13]
+#126: [12 11  4 13]
+#127: [12 11  5 13]
+#128: [12 11  6 13]
+#129: [12 11  7 13]
+#130: [12 11  8 13]
+#131: [12 11  9 13]
+#132: [12 11 10 13]
+\end{minted}
+\end{listing}
+
+\section{Beware of the Number of Path Candidates}
+
+The dominant limitation is combinatorial growth (\refsec{computational-complexity}, \refsec{exponential-path-generation}): the number of path candidates increases exponentially with the interaction order $K$.
+
+For the complete-graph setting used here (with the \glsxtrshort{tx} and the \glsxtrshort{rx} handled as endpoints outside the core graph), the number of candidates for a fixed interaction order $K$ is
+\begin{equation}
+  N \times (N-1)^{K-1},
+\end{equation}
+where $N$ is the number of scene objects in the complete graph. This fixed-order term is consistent with the growth discussed in \refsec{computational-complexity}.
+
+This induces the same trade-off emphasized in \refch{efficient-path-tracing}: a \texttt{DiGraph} with visibility pruning reduces the candidate count, while a \texttt{CompleteGraph} avoids preprocessing but incurs larger combinatorial growth.
+
+Because full \texttt{CompleteGraph} implementations demand substantial memory allocations for higher interaction orders, tracing algorithms must either estimate a filtered visibility matrix---even if imperfect compared to mathematically exact ray tracing---or explicitly manage memory by iterating over candidate branches in smaller chunks. DiffeRT facilitates this through specialized block-processing methods (e.g., \texttt{*chunks\_iter} methods in \texttt{differt\_core.rt}), allowing continuous generation without catastrophic memory overflow.
+
+Finally, to illustrate this scaling divergence, we compare the number of candidate paths produced by the directed graph (with exact visibility) and the complete graph across increasing depths.
+
+\begin{listing*}[htpb]
+  \caption{Comparing candidate counts between \texttt{DiGraph} and \texttt{CompleteGraph}.}
+  \lablisting{differt-graph-comparison}
+  \inputmintedmarker[]{python}{codes/wide/path-candidates.py}{count_paths}
+\end{listing*}
+
+The output of \reflisting{differt-graph-comparison} is shown in \reflisting{differt-graph-comparison-output}, demonstrating the exponential growth difference between the two graph models as depth increases.
+\begin{listing*}[htpb]
+  \caption{Output of \reflisting{differt-graph-comparison}.}
+  \lablisting{differt-graph-comparison-output}
+\begin{minted}{text}
+depth = 2:      1 (DiGraph) vs      1 (CompleteGraph)
+depth = 3:      4 (DiGraph) vs     12 (CompleteGraph)
+depth = 4:     16 (DiGraph) vs    132 (CompleteGraph)
+depth = 5:     56 (DiGraph) vs   1452 (CompleteGraph)
+depth = 6:    192 (DiGraph) vs  15972 (CompleteGraph)
+depth = 7:    680 (DiGraph) vs 175692 (CompleteGraph)
+\end{minted}
+\end{listing*}

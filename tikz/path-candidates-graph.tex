@@ -1,0 +1,61 @@
+% Requires:
+% \usetikzlibrary{calc}
+% \usetikzlibrary{graphs}
+% \usetikzlibrary{graphs.standard}
+% \providecommand{\glsxtrshort}[1]{#1}
+\begin{tikzpicture}[scale=0.95, every node/.append style={scale=0.95}, opacity=0.5,thick]
+  \graph[simple, edges={<->,thick}, nodes={draw=white, circle, fill=white, minimum width=5.4mm}, empty nodes, phase=180] { subgraph K_n [V={1,2,3,4,5,6},clockwise,radius=2cm];
+    1 --[<->,dashed] 5;
+    2 --[<->,dashed] 5;
+    3 --[<->,dashed] 5;
+    4 --[<->,dashed] 5;
+    6 --[<->,dashed] 5;
+  };
+  \path (1) -- (4) node[midway] (center) {};
+  \path (1) -- ++(-2,0) node[draw, circle, opacity=1.0, black, inner sep=1pt] (tx) {\glsxtrshort{tx}};
+  \path (4) -- ++(+2,0) node[draw, circle, opacity=1.0, black, inner sep=1pt] (rx) {\glsxtrshort{rx}};
+  \foreach \x [count=\idx from 0] in {1,...,6} {
+    \pgfmathparse{180 - \idx * (360 / 6)}
+    \ifnum\x=5
+    \node (tmp) at ($(center)+(\pgfmathresult:2cm)$) {...};
+    \else
+    \ifnum\x=1
+    \node[draw, circle, opacity=1.0, inner sep=0pt, text width=5mm, align=center, black] (tmp) at ($(center)+(\pgfmathresult:2cm)$) {$I_\x$};
+    \else
+    \ifnum\x=3
+    \node[draw, circle, opacity=1.0, inner sep=0pt, text width=5mm, align=center, black] (tmp) at ($(center)+(\pgfmathresult:2cm)$) {$I_3$};
+    \else
+    \ifnum\x=6
+    \node[draw, circle, fill opacity=1.0, text opacity=0.5, fill=white,inner sep=0pt, text width=5mm, align=center] (tmp) at ($(center)+(\pgfmathresult:2cm)$) {$I_N$};
+    \else
+    \node[draw, circle, inner sep=0pt, text width=5mm, align=center] (tmp) at ($(center)+(\pgfmathresult:2cm)$) {$I_\x$};
+    \fi
+    \fi
+    \fi
+    \fi
+
+    \ifnum\x=4
+    \else
+    \ifnum\x=5
+    \draw[->,dashed, thick] (tx) -- (\x);
+    \else
+    \draw[->, thick] (tx) -- (\x);
+    \fi
+    \fi
+
+    \ifnum\x=1
+    \else
+    \ifnum\x=5
+    \draw[->,dashed, thick] (rx) -- (\x);
+    \else
+    \draw[->, thick] (rx) -- (\x);
+    \fi
+    \fi
+  };
+  \draw[->,thick](tx) to[bend left] (4);
+  \draw[->,thick] (tx) to[bend left] (rx);
+  \draw[<-,thick] (rx) to[bend left] (1);
+  \draw[->, black, very thick, dashed, opacity=1.0] (tx) -- (3);
+  \draw[very thick,black,->,dashed,opacity=1.0] (3) -- (1);
+  \draw[<-,black,very thick,dashed,opacity=1.0] (rx) to[bend left] (1);
+\end{tikzpicture}

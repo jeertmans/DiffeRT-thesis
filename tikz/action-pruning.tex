@@ -1,0 +1,111 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{fit}
+% \usetikzlibrary{shapes.geometric}
+% \providecommand{\bsit}[1]{\boldsymbol{#1}}
+\begin{tikzpicture}
+  [thick,level distance=25mm,
+  level 1/.style={sibling distance=15mm},]
+
+  \makeatletter
+  \tikzset{
+    fitting node/.style={
+      inner sep=0pt,
+      fill=none,
+      draw=none,
+      reset transform,
+      fit={(\pgf@pathminx,\pgf@pathminy) (\pgf@pathmaxx,\pgf@pathmaxy)}
+    },
+    reset transform/.code={\pgftransformreset}
+  }
+  \makeatother
+
+  \pgfdeclarelayer{background}
+  \pgfsetlayers{background,main}
+
+  \pgfmathsetseed{1234} % For reproducible randomness
+  \newcommand{\drawFlow}[4]{
+    % Draw the thick background line
+    \begin{pgfonlayer}{background}
+      \draw[line width=6pt, opacity=0.2, #3] (#1.center) -- (#2.center);
+
+      % Generate random points
+      \ifnum#4>0
+      \foreach \i in {1,...,#4}{
+        % MATH EXPLANATION:
+        % ($ ... $) : Calculation wrapper
+        % (#1.center) ! .05 + 0.7*rnd ! (#2.center) : Pick a random point 15% to 95% along the line (avoids overlap with nodes)
+        % ! 2.5pt * (rand) ! 90:(#2.center) : Move perpendicularly (90 deg) by a random amount between -2.5pt and 2.5pt
+        \fill[#3, opacity=0.8]
+        ($ (#1.center) ! .05 + 0.9*rnd ! (#2.center) ! 2.5pt * (rand) ! 90:(#2.center) $)
+        circle (0.8pt);
+      }
+      \fi
+    \end{pgfonlayer}
+  }
+
+  \node[draw, inner sep=1pt, regular polygon, regular polygon sides=5, shape border rotate=180, fill=white, thick, label=right:{$=\left[\ldots, I_i, -1, \ldots, -1\right]$}] (sk) {$\bsit{I}$}
+  child {node[draw=black!50, text=black!50, circle, fill=white, minimum size=5mm, inner sep=0pt] (o1) {$I_1$}}
+  child {node[draw=black!50, text=black!50, circle, fill=white, minimum size=5mm, inner sep=0pt] (o2) {$I_2$}}
+  child {node[draw=black!50, text=black!50, circle, fill=white, minimum size=5mm, inner sep=0pt] (o3) {$I_3$}}
+  child {node[draw=black, text=black, circle, fill=white, minimum size=5mm, inner sep=0pt] (o4) {$I_4$}}
+  child {node[draw=black!50, text=black!50, circle, fill=white, minimum size=5mm, inner sep=0pt] (o5) {$...$}}
+  child {node[draw=black!50, text=black!50, circle, fill=white, minimum size=5mm, inner sep=0pt] (oi) {$I_i$}}
+  child {node[draw=black!50, text=black!50, circle, fill=white, minimum size=5mm, inner sep=0pt] (o7) {$...$}}
+  child {node[draw=black!50, text=black!50, circle, fill=white, minimum size=5mm, inner sep=0pt] (on) {$I_N$}}
+  ;
+
+  \path (sk) -- (o1) node[pos=.33] (o1a) {} node[pos=.66] (o1b) {};
+  \path (sk) -- (o2) node[pos=.33] (o2a) {} node[pos=.66] (o2b) {};
+  \path (sk) -- (o3) node[pos=.33] (o3a) {} node[pos=.66] (o3b) {};
+  \path (sk) -- (o4) node[pos=.33] (o4a) {} node[pos=.66] (o4b) {};
+  \path (sk) -- (o5) node[pos=.33] (o5a) {} node[pos=.66] (o5b) {};
+  \path (sk) -- (oi) node[pos=.33] (oia) {} node[pos=.66] (oib) {};
+  \path (sk) -- (o7) node[pos=.33] (o7a) {} node[pos=.66] (o7b) {};
+  \path (sk) -- (on) node[pos=.33] (ona) {} node[pos=.66] (onb) {};
+
+  \draw[rounded corners=1mm, fill=gray!20] ([shift={(-.2,-.1)}]o1a.west) rectangle ([shift={(.2,.1)}]ona.east) node[fitting node] (mask1) {};
+
+  \draw[rounded corners=1mm, fill=blue!60] ([shift={(-.2,-.1)}]o1b.west) rectangle ([shift={(.2,.1)}]onb.east) node[fitting node] (mask2) {};
+
+  \pgfmathsetseed{42}
+  \coordinate (sktop) at ([yshift=10mm]sk.north);
+  \drawFlow{sk}{sktop}{blue}{100};
+
+  \drawFlow{sk}{o1a}{blue!80!gray}{20};
+  \drawFlow{sk}{o2a}{blue!80!gray}{40};
+  \drawFlow{sk}{o3a}{blue!80!gray}{30};
+  \drawFlow{sk}{o4a}{blue!80!gray}{80};
+  \drawFlow{sk}{o5a}{blue!80!gray}{70};
+  \drawFlow{sk}{oia}{blue!80!gray}{50};
+  \drawFlow{sk}{o7a}{blue!80!gray}{10};
+  \drawFlow{sk}{ona}{blue!80!gray}{30};
+
+  \drawFlow{o1a}{o1b}{gray!80}{0};
+  \drawFlow{o2a}{o2b}{blue!80!gray}{40};
+  \drawFlow{o3a}{o3b}{gray!80}{0};
+  \drawFlow{o4a}{o4b}{blue!80!gray}{80};
+  \drawFlow{o5a}{o5b}{blue!80!gray}{70};
+  \drawFlow{oia}{oib}{gray!80}{0};
+  \drawFlow{o7a}{o7b}{blue!80!gray}{10};
+  \drawFlow{ona}{onb}{blue!80!gray}{30};
+
+  \drawFlow{o1b}{o1}{gray!80}{0};
+  \drawFlow{o2b}{o2}{blue!80!gray}{10};
+  \drawFlow{o3b}{o3}{gray!80}{0};
+  \drawFlow{o4b}{o4}{blue!80!gray}{80};
+  \drawFlow{o5b}{o5}{blue!80!gray}{20};
+  \drawFlow{oib}{oi}{gray!80}{0};
+  \drawFlow{o7b}{o7}{blue!80!gray}{40};
+  \drawFlow{onb}{on}{blue!80!gray}{20};
+
+  \path (oi.south) -- ++(.0,-0.2) node[anchor=north west,align=center,font=\small] (tmp) {Invalid action as cannot\\reflect twice on the same object};
+  \draw (oi.south) to[bend right] ([xshift=.3cm,yshift=-.3cm]tmp.north west);
+  \draw (o4) to[bend right] ++(-.9,-.7) node[anchor=north,align=center,font=\small] {Most probable action (i.e., largest incoming flow)\\Sampling would lead to state $\bsit{I}' =\left[\ldots, I_i, I_4, \ldots, -1\right]$};
+  \draw (mask1.east) -- ++(.4,0) node[anchor=west,align=center,font=\small] {Masking unreachable objects};
+  \draw (mask2.east) -- ++(.4,0) node[anchor=west,align=center,font=\small] {Distance-based\\weighting};
+
+  \draw[thick, ->,shorten >=0.5cm,shorten <=1.0cm] ([yshift=0.5cm]sk.center) -- +($(o1)-(sk)$) node[midway,above,sloped] {Flow to child states};
+  \draw[thick, ->,shorten >=0.35cm,shorten <=0.1cm] ([xshift=0.3cm]sktop.center) -- +($(sk)-(sktop)$) node[pos=0.4,right] {Flow from parent state};
+\end{tikzpicture}

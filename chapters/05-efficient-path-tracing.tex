@@ -1,0 +1,499 @@
+\chapter{Efficient Path Tracing}\labch{efficient-path-tracing}
+
+The differentiable ray tracing methods introduced in \refch{drt} provide a practical route to gradient-based optimization, but their usefulness in realistic scenarios depends on computational efficiency. In wireless applications---from network planning to beam-management optimization---simulations must handle large, geometrically complex environments under strict runtime constraints.
+
+Moving from classical deterministic propagation models to differentiable, accelerator-based pipelines introduces additional computational requirements. The cost of ray tracing already depends on the number of rays, geometric complexity, interaction depth, and accuracy targets. Differentiability adds the overhead of gradient computation and the memory cost of storing intermediate states for reverse-mode differentiation.
+
+This chapter studies tractability mechanisms across the full simulation pipeline: complexity reduction, visibility-based pruning, acceleration structures, hardware execution, and memory-aware differentiation. The objective is to make differentiable ray tracing usable in large site-specific digital-twin workflows.
+
+\begin{figure}
+  \centering
+  \inputtikz{rt-pipeline}
+  \caption{High-level view of the typical blocks in modern ray tracers. Some blocks can be subdivided into smaller tasks (e.g., geometry construction), whereas others can be processed jointly to improve performance (e.g., path finding and electromagnetic field computation).}
+  \labfig{rt-pipeline}
+\end{figure}
+
+\section{Scene Representation in Modern Ray Tracing Pipelines}\labsec{scene-representation}
+
+Although scene representation is not directly related to efficient path tracing, it affects all downstream methods. A fundamental prerequisite for any deterministic simulation is the acquisition of an accurate digital environmental model.
+
+For outdoor scenarios, publicly available data such as \gls{osm} Buildings~\sidecite{OSMBuildings} represents building footprints as polygons. When extruded to building height, these form polyhedra that can be perfectly approximated by triangular facets. Most buildings follow this standardized representation; advanced models for specific buildings are exceptions. Similarly, the ground is typically modeled as a planar surface, though elevation data from sources such as NASA~\sidecite{NASADEM} enables varying-height terrain representation through triangular facets. Overall, such maps typically have meter-level accuracy. Except in specialized studies, details such as foliage, facade balconies, and glass windows are typically omitted.
+
+Indoor environments are commonly modeled using 3D software such as Blender. While Blender supports outdoor scenarios, hand-crafted modeling is not scalable. Point clouds offer a practical alternative for modeling new environments rapidly. Point clouds can be acquired inexpensively using LiDAR and similar devices. However, ray tracing requires surface or edge interactions, not point interactions, so point clouds must be preprocessed and transformed into surface elements. For specular reflections, a common approach treats each point as a potential reflection site and verifies that ray paths fall within the first Fresnel zone defined by the transmitter and receiver positions~\sidecite{Vaara2025}. For diffraction, edges extracted from the point cloud serve as diffracting elements.
+
+Beyond geometric representation, ray tracing requires accurate material properties to compute reflection coefficients, transmission losses, and diffraction. Material characterization is a significant practical challenge, as properties depend on frequency, incidence angle, and material composition.
+
+Common sources for material properties include:
+\begin{itemize}
+  \item \emph{Material databases} with pre-measured properties for standard construction materials (concrete, brick, glass, metal, asphalt) at common frequencies~\sidecite[][Tab.~3]{ITU-R-P.2040}.
+  \item \emph{Manufacturer specifications} providing dielectric loss and permittivity data from building material suppliers.
+  \item \emph{In-situ measurements} enabling empirical characterization via transmission or reflection measurements at deployment frequencies.
+  \item \emph{Literature values} from published measurements in prior propagation studies in similar environments.
+\end{itemize}
+
+In practice, material uncertainty is often significant; properties can vary substantially within a single building material category depending on composition, age, and moisture content. For this reason, many studies either employ conservative (high-loss) material assumptions or conduct sensitivity analysis over material parameter ranges. When constructing digital twins for network optimization, calibration against in-situ measurements is necessary to reduce uncertainty and improve prediction accuracy.
+
+In summary, most ray tracing tools assume environments are represented by triangular meshes with material-specific reflection and transmission models. Consequently, advanced techniques such as \gls{mpt} are typically impractical for general-purpose scenarios and are reserved for specialized studies with detailed environmental descriptions.
+
+\section{The Challenge of Exponential Path Generation}\labsec{exponential-path-generation}
+
+In this section, we examine why exact point-to-point ray tracing becomes difficult to scale and why acceleration is essential in realistic scenes. In deterministic propagation modeling, we seek geometric paths between a transmitter and a receiver that satisfy reflection, transmission, and diffraction constraints.
+
+The core challenge is not the recovery of one feasible path, which can often be done efficiently with the image method or Fermat-based formulations (see \refch{drt}), but the growth of the candidate search space as scene complexity and interaction order increase. For a scene with $N$ primitives and a maximum interaction order $K$, the number of possible interaction sequences scales as $\mathcal{O}(N^K)$, making exhaustive search rapidly impractical. In the next subsection, we make this growth explicit through the image-tree viewpoint.
+
+\subsection{The Image Tree and Candidate Generation}
+
+\begin{figure*}
+  \centering
+  \inputtikz{image-tree}
+  \caption{Image tree encoding all candidate interaction sequences up to second-order interactions.}
+  \labfig{image-tree}
+\end{figure*}
+
+As discussed in \refsec{combinatorial-bottleneck}, candidate-path generation can be represented as a tree (see \reffig{image-tree}) whose size grows exponentially with the number of objects and interaction order. In this tree, each node represents an object interaction (e.g., a reflection on a wall), and each edge represents selecting that interaction in the sequence. For reflection-only paths, level 1 connects the transmitter to all $N$ objects, level 2 connects each object to up to $N-1$ others, and so on. For a fixed interaction order $K$, the tree contains up to $N(N-1)^{K-1}$ leaves (path candidates), which becomes unmanageable even for moderate $N$ and $K$ (see \reffig{combinatorial-explosion}). Therefore, exhaustive candidate enumeration is infeasible in large scenes or at high interaction orders, motivating early search-space reduction.
+
+\begin{figure}
+  \centering
+  \inputtikz{combinatorial-explosion}
+  \caption{Exponential growth of the number of candidate paths with increasing interaction order $K$. Multiple curves show different environment complexities ($N$ is the number of triangle facets) provided by Sionna~RT~\cite{Hoydis2023}.}
+  \labfig{combinatorial-explosion}
+\end{figure}
+
+\subsection{Physical Sparsity and Validity Constraints}
+
+\begin{figure*}
+  \centering
+  \begin{subfigure}[t]{0.32\contentwidth}
+    \centering
+    \inputtikz{valid-invalid-ray-paths-1}
+    \caption{First-order reflections.}
+    \labfig{valid-invalid-ray-paths-1}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.32\contentwidth}
+    \centering
+    \inputtikz{valid-invalid-ray-paths-2}
+    \caption{Second-order reflections.}
+    \labfig{valid-invalid-ray-paths-2}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.32\contentwidth}
+    \centering
+    \inputtikz{valid-invalid-ray-paths-3}
+    \caption{Third-order reflections.}
+    \labfig{valid-invalid-ray-paths-3}
+  \end{subfigure}
+  \caption{Illustration of the sparsity of valid ray paths (solid green) compared to the combinatorial explosion of candidates, which leads to many invalid ray paths (dashed gray) in a simple 2D scenario with a single obstacle. As interaction order increases, the ratio of valid paths to candidates decreases dramatically, highlighting the need for pruning strategies.}
+  \labfig{valid-invalid-ray-paths}
+\end{figure*}
+
+Most generated sequences in the image tree correspond to physically invalid ray paths. In exact path tracing, this occurs mainly for two reasons. First, a candidate can be \emph{occluded} by objects that are not part of the sequence (the \emph{visibility problem}). Second, interaction points returned by exact methods may violate geometric constraints because those methods often assume infinitely extended primitives.
+
+Even in elementary scenarios, the ratio of valid paths to total candidates is exceedingly low. For instance, in a 2D setup with a single obstacle, only a small fraction of combinatorial candidates satisfy both visibility and geometric constraints (see \reffig{valid-invalid-ray-paths}). As interaction order increases, this ratio drops sharply, creating an explosion of invalid paths that must be filtered out. In realistic urban scenes with hundreds to thousands of objects, the vast majority of candidates are also invalid: for every million generated candidates, only a few hundred may be valid at second order, and even fewer at higher orders~\sidecite[-2\baselineskip]{Eertmans2026NPJWT}. This combination of strong sparsity and exponential growth motivates aggressive pruning before expensive path validation.
+
+\section{Pruning Strategies}
+
+In this section, we discuss strategies to prune the combinatorial search space of candidate paths before expensive path validation. These methods leverage physical constraints, scene structure, and visibility information to eliminate large subsets of invalid candidates early in the process.
+
+\subsection{Merging Facets and Objects}
+
+One effective mitigation strategy is to merge adjacent facets or objects into larger primitives, reducing the total number of scene elements $N$ and therefore the branching factor of the image tree. In urban environments, for example, building facades can be represented as single large planes rather than many small triangles. This reduces the primitive count and simplifies geometric computations for reflections and diffractions. The trade-off is that excessive merging can degrade accuracy, so the strategy must balance computational efficiency and geometric fidelity. DiffeRT~\sidecite{Eertmans2025ICMLCNDemo}, for instance, uses virtual merging of consecutive triangles into quadrilaterals, reducing the number of objects by roughly a factor of two.
+
+In some scenes, triangles are also grouped into \emph{real objects} (e.g., buildings, trees, and vehicles). This enables object-level path finding rather than triangle-level path finding, further reducing the object count and the branching factor. If objects are convex polyhedra (as in many rectangular buildings), Fermat's principle implies that two consecutive interactions cannot occur on the same object; candidates with such sequences can therefore be pruned a priori. When object grouping is not provided in the scene description, however, this approach requires additional preprocessing to infer object membership, which can be expensive and difficult in scenes with many small or irregular shapes.
+
+\subsection{Masking Unreachable Objects After Reflection}\labsec{masking-unreachable-objects}
+
+After a reflection, the outgoing ray direction is constrained by the surface normal and the incident direction, so only a subset of objects can be reached. Even without the exact reflection point, unreachable objects can be identified by testing whether they lie outside the reflection half-space induced by the incident direction and the surface normal. Candidates requiring reflections toward those objects can then be pruned early, substantially reducing downstream validity checks. This strategy is especially effective in dense scenes. If, on average, half of the objects are unreachable after each reflection (as in a roughly random spatial distribution), the number of candidates is reduced by a factor of $2^K$ for paths with $K$ interactions. \reffig{masking-unreachable-objects} illustrates this in 2D: the shaded region denotes objects that are unreachable after a reflection. If surface orientation is known (i.e., interior versus exterior), pruning can be strengthened further by excluding reflections toward interior objects. In \reffig{masking-unreachable-objects}, for example, surfaces $s_4$ and $s_5$ are also unreachable after the first reflection on $s_1$. Computing the half-space and testing object positions against it is computationally inexpensive and can be done either during candidate generation or during scene preprocessing, providing a straightforward way to reduce the number of candidates.
+
+\begin{figure}
+  \centering
+  \inputtikz{masking-unreachable-objects}
+  \caption{Illustration of the masking of unreachable objects after a reflection. The shaded area represents the half-space of unreachable objects after a reflection on surface $s_1$.}
+  \labfig{masking-unreachable-objects}
+\end{figure}
+
+\subsection{Visibility Preprocessing}
+
+Similar to the previous strategy, visibility relations between objects can be computed offline and used to prune candidates that require transitions between non-visible objects. This approach extends the notion of unreachable objects to the broader case of occlusion (e.g., object shadowing), but it also introduces implementation challenges. While visibility can be solved efficiently (and exactly) in 2D, the problem is more complex in 3D because of the increased geometric complexity and partial occlusion. Even so, coarse visibility analysis can provide significant pruning benefits and is widely used in practical ray tracers~\sidecite{AguadoAgelet2000,Lu2019}. The following subsections present two implementations of visibility preprocessing: transmitter/receiver visibility and inter-object visibility.
+
+\begin{figure}
+  \centering
+  \inputtikz{path-candidate-visibility}
+  \caption{2D scenario with triangular-shaped objects on which reflection or diffraction can occur. Surfaces are colored in black and edges in \textcolor{red}{red}.}
+  \labfig{path-candidate-visibility}
+\end{figure}
+
+\subsubsection{Transmitter and Receiver Visibility}
+
+\begin{figure*}
+  \centering
+  \begin{subfigure}{0.49\contentwidth}
+    \centering
+    \inputtikz{path-candidate-visibility-from-tx}
+    \caption{Objects visible from \glsxtrshort{tx}.}
+    \labfig{path-candidate-visibility-from-tx}
+  \end{subfigure}
+  \begin{subfigure}{0.49\contentwidth}
+    \centering
+    \inputtikz{path-candidate-visibility-from-rx}
+    \caption{Objects visible from \glsxtrshort{rx}.}
+    \labfig{path-candidate-visibility-from-rx}
+  \end{subfigure}
+  \caption{Example 2D visibility for the \glsxtrfull{tx} and \glsxtrfull{rx}. Objects are faded if they are not visible from the corresponding node.}
+  \labfig{path-candidate-visibility-from}
+\end{figure*}
+
+The most basic form of visibility pruning is to determine which objects are visible from the transmitter and receiver positions. Any candidate path that requires an interaction with an object invisible from either endpoint can be pruned immediately. This simple first step effectively removes candidates that cannot contribute to the received signal.
+
+To determine visibility, ray launching is a common approach. A large number of rays are cast from the transmitter and the receiver toward scene objects. Any object hit by at least one ray is considered visible, and the remaining objects are marked as invisible (i.e., unreachable). If a ray intersects another object before reaching a target object, that target is marked as occluded. \reffig{path-candidate-visibility-from} illustrates transmitter and receiver visibility for the scenario in \reffig{path-candidate-visibility}.
+
+This process is relatively inexpensive and can be performed offline as a preprocessing step because it scales linearly with the number of objects and rays. It can be further accelerated with spatial data structures, briefly discussed in \refsec{acceleration-structures}.
+
+Finally, ray casting provides an approximation of visibility because it depends on the number and distribution of rays. In practice, a sufficiently large ray set yields good estimates, but edge cases remain: objects may still be incorrectly marked as invisible, especially when they are small or partially occluded. This method is therefore typically used as a pruning heuristic rather than an exact test.
+
+\subsubsection{Inter-Object Visibility}
+
+While transmitter- and receiver-based visibility pruning effectively removes candidates that involve non-visible objects, it does not capture occlusion between objects themselves. In multi-interaction paths, an object visible from the transmitter may still be occluded by another object before the receiver is reached. It is therefore beneficial to compute inter-object visibility as well, typically via ray casting between object pairs. Unlike transmitter/receiver visibility, however, the ray source is no longer a single point: it can be any point on an object's surface. In principle, this requires casting rays from every point on one object to every point on another. In practice, only a limited set of sample points is used. Even then, the method scales quadratically with the number of objects and can be expensive in large scenes. Spatial partitioning can mitigate this cost by restricting tests to nearby object pairs.
+
+\subsubsection{The Visibility Matrix}
+
+Recalling the graph-based formulation of path-candidate generation from \refsec{computational-complexity}, visibility relations can be encoded in an adjacency matrix $\mathcal{G} \in \{0,1\}^{N+2 \times N+2}$, where $N$ is the number of scene objects, and the additional two dimensions represent the transmitter and receiver nodes. An entry $\mathcal{G}_{ij}$ equals 1 if objects $i$ and $j$ are mutually visible (i.e., there is an unobstructed \gls{line-of-sight}), and 0 otherwise. \reffig{visibility-adjacency-matrix} shows an example for the scenario in \reffig{path-candidate-visibility}. Candidate paths can then be generated by graph traversal on $\mathcal{G}$ from the transmitter node to the receiver node. A comparison of candidate counts with and without visibility pruning is provided in \refappendix{path_candidates}.
+
+\begin{figure}
+  \centering
+  \begin{equation*}
+    \renewcommand{\arraystretch}{.6}
+    \makeatletter\setlength\BA@colsep{3pt}\makeatother
+    \begin{blockarray}{ccccccccccccccc}
+      & \text{\glsxtrshort{tx}} & s_1 & s_2 & s_3 & s_4 & s_5 & s_6 & e_1 & e_2 & e_3 & e_4 & e_5 & e_6 & \text{\glsxtrshort{rx}}\\
+      \begin{block}{c(>{\medspace}c|cccccc|cccccc|c<{\medspace})}
+        \text{\glsxtrshort{tx}} & {} & 1 & {} & {} & {} & {} & 1 & 1 & 1 & {} & 1 & {} & 1 & 1\\
+        \BAhhline{~~------------~}
+        s_1 & {} & {} & {} & {} & {} & {} & \bsit{1} & {} & {} & {} & \bsit{1} & {} & & {} & {}\\ %s1
+        s_2 & {} & {} & {} & {} & {} & {} & \bsit{1} & {} & {} & {} & \bsit{1} & {} & \bsit{1} & 1\\ %s2
+        s_3 & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {}\\ %s3
+        s_4 & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {}\\ %s4
+        s_5 & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {}\\ %s5
+        s_6 & {} & \bsit{1} & \bsit{1} & {} & {} & {} & {} & \bsit{1} & \bsit{1} & \bsit{1} & {} & {} & {} & 1\\ % s6
+        e_1 & {} & {} & {} & {} & {} & {} & \bsit{\color{red}1} & {} & {} & {} & \bsit{\color{red}1} & {} & {} & {}\\ % e1
+        e_2 & {} & {} & {} & {} & {} & {} & \bsit{\color{red}1} & {} & {} & {} & \bsit{\color{red}1} & {} & \bsit{\color{red}1} & 1\\ %e2
+        e_3 & {} & {} & {} & {} & {} & {} & \bsit{\color{red}1} & {} & {} & {} & \bsit{\color{red}1} & {} & \bsit{\color{red}1} & 1\\ %e3
+        e_4 & {} & \bsit{\color{red}1} & \bsit{\color{red}1} & {} & {} & {} & {} & \bsit{\color{red}1} & \bsit{\color{red}1} & \bsit{\color{red}1} & {} & {} & {} & 1 \\ %e4
+        e_5 & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {}\\ %e5
+        e_6 & {} & {} & \bsit{\color{red}1} & {} & {} & {} & {} & {} & \bsit{\color{red}1} & \bsit{\color{red}1} & {} & {} & {} & 1\\
+        \BAhhline{~~------------~}
+        \text{\glsxtrshort{rx}} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {} & {}\\
+      \end{block}
+    \end{blockarray}
+    %}
+  \end{equation*}
+  \caption{Adjacency matrix, $\mathcal{G}$, generated from the scenario illustrated in \reffig{path-candidate-visibility-tris}. Each row of this $14 \times 14$ matrix refers to the visible objects as seen from the corresponding object. For readability purposes, zeros are discarded. The black coefficients indicate possible reflections, while the \textcolor{red}{red} ones are for diffractions.}
+  \labfig{visibility-adjacency-matrix}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \inputtikz{path-candidate-visibility}
+  \caption{2D scenario with triangular-shaped objects on which reflection or diffraction can occur, repeated here for convenience from \reffig{path-candidate-visibility}. Surfaces are colored in black and edges in \textcolor{red}{red}.}
+  \labfig{path-candidate-visibility-tris}
+\end{figure}
+
+\subsection{Learning-Based Pruning}
+
+As briefly introduced at the end of \refch{path-tracing}, machine learning models can be trained to predict the validity likelihood of candidate paths based on geometric features, interaction sequences, and visibility information. These models can be used to rank candidates and prune those below a chosen likelihood threshold before expensive validation. While this approach is promising, it requires careful feature engineering and training-data generation to ensure generalization across diverse environments. In addition, the model-inference overhead must be justified by the reduction in candidate-validation time. This method remains an active research area and has not yet been widely adopted in practical ray tracing pipelines; it is discussed further in \refch{research-applications}.
+
+\section{Dynamic Scenarios and Continuous Updates}
+
+In dynamic scenarios such as \gls{v2x} communication, the environment changes continuously as vehicles and pedestrians move. However, static objects (e.g., buildings) remain unchanged, so visibility relations between them can be precomputed offline. At runtime, only node-to-scene visibility must be updated as transmitters and receivers move. This enables efficient ray-path extrapolation without full recomputation and supports real-time updates in dynamic environments.
+
+As a result, \emph{dynamic ray tracing} techniques have been introduced for such scenarios~\sidecite{Bilibashi2020,Quatresooz2021}. These methods leverage precomputed visibility and spatial data structures to update ray paths quickly as nodes move, rather than recomputing the entire path tree from scratch. This is particularly beneficial in high-mobility settings where rapid updates are required.
+
+\begin{figure}
+  \centering
+  \inputtikz{dynrt-pipeline}
+  \caption{Simplified pipeline for dynamic ray tracing: once ray paths are computed, sufficiently small scene changes enable extrapolation of updated paths rather than full recomputation. This is possible because visibility relations between static objects remain unchanged, and only node-to-scene visibility must be updated at runtime.}
+  \labfig{dynrt-pipeline}
+\end{figure}
+
+\subsection{Tracking Interaction Points and Doppler Shifts}
+
+Instead of computing an independent static snapshot at each time instant, dynamic ray tracing analytically tracks the motion of interaction points (e.g., reflection and diffraction points) over moving geometry~\sidecite{Quatresooz2021}. Assuming the instantaneous velocities of the transmitter ($\bsup{v}_{\glsxtrshort{tx}}$) and receiver ($\bsup{v}_{\glsxtrshort{rx}}$) are known, the velocity of each interaction point can be characterized explicitly~\sidecite{Quatresooz2021}.
+
+For example, the instantaneous velocity of a reflection point on a planar surface can be derived geometrically from the intersection between the reflecting plane and the line connecting the transmitter image (with respect to that plane) and the receiver. Using finite differences on the reflection-point trajectory yields
+\begin{equation}
+  \bsup{v}_r = \lim_{\Delta t \to 0} \frac{\bsup{x}_r(t_0+\Delta t) - \bsup{x}_r(t_0)}{\Delta t}.
+\end{equation}
+
+This geometric tracking enables immediate derivation of channel characteristics, such as Doppler shifts, from a single ray tracing run. For a generalized ray with multiple interactions across $K$ moving scattering points (each with velocity $\bsup{v}_k$), the Doppler-shifted received frequency is
+\begin{equation}
+  f' = f_0 \prod_{k=1}^{K} \left( \frac{c - \bsup{v}_k \cdot \uvec{k}_k}{c - \bsup{v}_{k-1} \cdot \uvec{k}_k} \right),
+\end{equation}
+where $f_0$ is the carrier frequency, $\uvec{k}_k$ is the unit vector of segment $k$, and $c$ is the speed of light.
+
+\subsection{Visibility Assumptions and the Multipath Lifetime Map}
+
+Dynamic ray tracing extrapolation assumes that the active multipath structure remains unchanged for a limited interval, so paths do not need to be recomputed at every time step. This interval is related to the channel \enquote{coherence time} ($T_c$) and can be estimated from measurements~\sidecite{Bilibashi2020}. In practice, however, measurement-based estimates are not always reliable because the measurement scenario may differ from the simulated one (geometry, traffic, materials, and mobility patterns).
+
+The validity interval also depends on modeling choices: higher interaction orders generally induce more frequent structural changes under mobility, because additional bounces are more sensitive to geometric perturbations. Moreover, expressing validity only in time can be misleading, as time bounds are tied to relative speeds. A spatial criterion is often more informative, since it decouples structural stability from instantaneous velocity.
+
+For this reason, we introduce the \gls{mlm}---a geometric tool that characterizes the spatial extent over which a multipath structure remains unchanged~\sidecite{Eertmans2025EuCAP}. Its full treatment is deferred to \refch{research-applications}; in particular, for single-object mobility (e.g., receiver displacement in a street canyon), these regions can be visualized directly in 2D. Operationally, once the spatial validity region is exited, extrapolation expires and a new full ray tracing snapshot is required to reinitialize path tracking~\sidecite{Quatresooz2021}.
+
+\subsection{Dynamic vs. Differentiable Ray Tracing}
+
+Dynamic ray tracing and differentiable ray tracing should be viewed as complementary capabilities rather than competing paradigms~\sidecite{Eertmans2025EuCAP}. Dynamic ray tracing focuses on fast temporal updates of path geometry, whereas differentiable ray tracing provides derivatives with respect to scene or system parameters.
+
+Historically, the first dynamic ray tracing formulations used manually derived symbolic expressions for path-coordinate updates. These derivations can provide strong physical interpretability and low runtime cost, but they scale poorly as scenarios become more complex or when derivatives are needed with respect to richer parameterizations (e.g., a rotating car or multiple moving vehicles).
+
+Automatic differentiation offers a practical alternative: the same dynamic-update pipeline can be differentiated with respect to local variations without deriving new closed-form expressions for each case. In that sense, differentiable ray tracing can directly support dynamic ray tracing by broadening the set of tractable motion and sensitivity analyses.
+
+\section{Efficient Ray--Object Intersection}
+
+A fundamental operation in ray tracing is the intersection test between rays and scene objects (e.g., triangles). The efficiency of this operation directly impacts the overall performance of the ray tracer, especially when millions of rays must be tested against thousands of objects. The optimal algorithmic approach for this operation depends heavily on the specific geometric representation of the scene's objects. In this section, we present a very popular (and fast) algorithm for ray--triangle intersection and discuss how spatial data structures can further accelerate these computations.
+
+\subsection{Möller--Trumbore Ray--Triangle Intersection Algorithm}
+
+When it comes to ray--triangle intersection, the Möller--Trumbore algorithm~\sidecite{Moller1997} is widely adopted because of its efficiency and robustness. It computes the intersection of a ray with a triangle defined by its vertices in 3D space. The algorithm uses barycentric coordinates to determine whether the intersection point lies within the triangle and to compute the distance from the ray origin to the intersection point. Its main advantage is that it minimizes arithmetic operations and avoids unnecessary computation through early rejection tests, making it suitable for real-time and large-scale ray tracing. However, in differentiable ray tracing, such early rejections are not directly compatible with gradient computation through branching operations. As a result, \cref{alg:moller-trumbore} presents a modified version of the Möller--Trumbore algorithm that aggregates subsequent rejection tests into a single boolean flag. The algorithm also includes optional smoothing, as introduced in \refsec{drt-discontinuities}, where the returned intersection flag becomes a continuous value between 0 and 1 rather than a binary hit-or-miss indicator. \reffig{moller-trumbore-smoothing} illustrates the geometric transformation to barycentric coordinates, as well as the effect of this smoothing near triangle boundaries, where the intersection flag transitions smoothly from 1 (full hit) to 0 (full miss) across a boundary region defined by the tolerance $\epsilon$ and smoothing factor $\alpha$. On triangle edges, the intersection flag always evaluates to $\tfrac{1}{2}$.
+
+{
+  \def\hit{\text{hit}\xspace}
+  \def\and{\textbf{and}\xspace}
+  \begin{algorithm}
+    \caption{Möller--Trumbore algorithm with optional smoothing.}
+    \label{alg:moller-trumbore}
+    \DontPrintSemicolon
+    \KwIn{Ray origin $\bsup{o}$ and direction $\bsup{d}$, triangle vertices $\bsup{v}_0, \bsup{v}_1, \bsup{v}_2$, tolerance $\epsilon$, smoothing factor $\alpha$ (optional), and smoothing function $s(\cdot\;\alpha)$}
+    \KwOut{Distance to intersection $t$ and intersection flag/probability $\hit$}
+    $\bsup{e}_1 \gets \bsup{v}_1 - \bsup{v}_0,\,\bsup{e}_2 \gets \bsup{v}_2 - \bsup{v}_0$\tcp*[f]{Triangle edges}\;
+    $\bsup{h} \gets \bsup{d} \times \bsup{e}_2$\;
+    $a \gets \bsup{e}_1 \cdot \bsup{h}$\tcp*[f]{Determinant}\;
+
+    \tcp{Check ray--triangle parallelism}
+    \eIf{$\alpha$ is provided}{
+      $\hit \gets s(|a| - \epsilon; \alpha)$\;
+    }{
+      $\hit \gets |a| > \epsilon$\;
+    }
+
+    $f \gets \tfrac{1}{a}$\tcp*[f]{In practice, division by zero must be handled with care}\;
+    $\bsup{s} \gets \bsup{o} - \bsup{v}_0$\;
+    $u \gets f [\bsup{s} \cdot \bsup{h}]$\tcp*[f]{1\textsuperscript{st} barycentric coordinate}\;
+
+    \tcp{Check 1\textsuperscript{st} barycentric coordinate}
+    \eIf{smoothing is enabled}{
+      $\hit \gets \min(\hit, s(u; \alpha), s(1 - u; \alpha))$\;
+    }{
+      $\hit \gets \hit$ \and $u \ge 0$ \and $u \le 1$\;
+    }
+
+    $\bsup{q} \gets \bsup{s} \times \bsup{e}_1$\;
+    $v \gets f [\bsup{d} \cdot \bsup{q}]$\tcp*[f]{2\textsuperscript{nd} barycentric coordinate}\;
+
+    \tcp{Check 2\textsuperscript{nd} barycentric coordinate}
+    \eIf{smoothing is enabled}{
+      $\hit \gets \min(\hit, s(v; \alpha), s(1 - (u + v); \alpha))$\;
+    }{
+      $\hit \gets \hit$ \and $v \ge 0$ \and $u + v \le 1$\;
+    }
+
+    $t \gets f [\bsup{e}_2 \cdot \bsup{q}]$\tcp*[f]{Ray distance to intersection}\;
+
+    \tcp{Check ray depth}
+    \eIf{smoothing is enabled}{
+      $\hit \gets \min(\hit, s(t - \epsilon; \alpha))$\;
+    }{
+      $\hit \gets \hit$ \and $t > \epsilon$\;
+    }
+    \KwRet $t, \hit$
+  \end{algorithm}
+}
+
+\begin{figure*}
+  \centering
+  \tikzexternaldisable % Workaround: path fading in this figure conflicts with externalization on some setups.
+  \inputtikz{moller-trumbore-smoothing}
+  \tikzexternalenable
+  \caption{Translation and change of basis of the ray origin, adapted from \cite[Fig.~1]{Moller1997}, and smoothing near triangle boundaries.}
+  \labfig{moller-trumbore-smoothing}
+\end{figure*}
+
+\subsection{Spatial Subdivision and Bounding Volume Hierarchies}\labsec{acceleration-structures}
+
+As established in \refsec{exponential-path-generation}, naive path-candidate generation leads to a combinatorial explosion. Even after aggressive pruning, a practical simulation may still need to evaluate millions of ray paths in environments containing thousands of objects. Testing every ray against every geometric object is computationally intractable and memory-intensive.
+
+To significantly reduce the number of objects considered during these queries, modern ray tracers rely on acceleration structures. These spatial data structures organize the scene geometry so that rays can quickly discard large sections of the environment they will definitively not intersect, focusing computational power only on objects in their direct path.
+
+Two historical approaches dominate this space: $k$-d trees~\sidecite{Bentley1975} and \glspl{bvh}~\sidecite{Clark1976,Goldsmith1987}.
+
+\subsubsection{$k$-d Trees: Partitioning Space}
+
+A $k$-d (short for $k$-dimensional) tree strictly partitions the 3D space itself into non-overlapping regions using axis-aligned splitting planes.
+
+\begin{figure*}
+  \inputtikz{kd-tree}
+  \caption{Illustration of $k$-d tree applied to a simple scene with 7 objects. The $k$-d tree strictly partitions space into non-overlapping regions, where each node contains a splitting plane and its child nodes.}
+  \labfig{kd-tree}
+\end{figure*}
+
+As illustrated in \reffig{kd-tree}, each node in the $k$-d tree represents a spatial plane that divides the space in half. As a ray traverses the tree, it steps through these spatial regions sequentially. Because the spatial partitions never overlap, $k$-d trees are highly efficient at finding the closest intersection point quickly. They perform exceptionally well on traditional \gls{cpu} architectures.
+
+However, a significant limitation arises when geometric objects straddle splitting planes: such objects must be duplicated and stored in multiple nodes. On highly parallel architectures like \glspl{gpu}, this object duplication increases memory overhead and complicates traversal logic, leading to inefficiencies.
+
+\subsubsection{Bounding Volume Hierarchy: Partitioning Objects}
+
+Unlike $k$-d trees, a \gls{bvh} partitions the \emph{objects} rather than the physical space. It organizes the scene primitives into a hierarchy of overlapping bounding boxes.
+
+\begin{figure*}
+  \inputtikz{bvh}
+  \caption{Illustration of \gls{bvh} applied to a simple scene with 7 objects. The \gls{bvh} organizes primitives into a binary tree of bounding boxes, where each node contains a bounding box that encloses its child nodes.}
+  \labfig{bvh}
+\end{figure*}
+
+As illustrated in \reffig{bvh}, \glsxtrlongpl{bvh} organize the scene through leaf nodes that contain the actual geometric objects, while parent nodes contain a bounding box that completely encloses all of their children. If a ray misses a parent bounding box, the ray tracer knows it can safely ignore all objects inside it.
+
+Because \glspl{bvh} partition the object list, each object is referenced exactly once. This zero-duplication, object-centric approach provides predictable memory usage and minimizes divergence, making \glspl{bvh} the undisputed standard for modern, many-core \gls{gpu} architectures.
+
+One drawback is that bounding boxes can overlap. If a ray passes through an overlapping region, the traversal algorithm must check both branches of the tree, which can sometimes lead to redundant intersection tests.
+
+\section{Hardware Acceleration and \glsxtrshort{gpu} Execution Paradigms}\labsec{gpu-acceleration}
+
+Modern ray tracing benefits profoundly from hardware acceleration, but exploiting these architectures effectively requires understanding fundamental hardware constraints. Unlike traditional compute-focused algorithms, ray tracing accelerated by \glspl{gpu} is typically \emph{memory-bound} rather than compute-bound; bandwidth and cache efficiency dominate performance far more than raw floating-point throughput. Consequently, acceleration techniques must prioritize improved memory access patterns, reduced warp divergence (caused by divergent execution paths, for example, due to branching), and minimized data movement rather than simply fewer arithmetic operations.
+
+Additionally, \gls{gpu} compilation imposes strict constraints on program structure. As already discussed in \refch{drt}, most \gls{gpu} frameworks cannot accommodate fully dynamic control flow or variable-sized data structures; compilers require tensor shapes and loop bounds to be known at compile time. This necessitates reformulating ray tracing logic---which naturally involves branching and variable-depth recursion---into fixed-size tensor operations with explicit static parameters. \Glsxtrfull{jit} compilation, such as that provided by JAX via \gls{xla}, is therefore essential for managing this complex branching logic while maintaining performance. It generates specialized kernels for each unique combination of static parameters, enabling both efficient execution and correct gradient computation.
+
+As a practical example, dynamic path-candidate generation via graph traversal must be reformulated into fixed-size batches using padding and chunking operations, and acceleration structures such as \glspl{bvh} must be designed to hold a fixed number of objects per node rather than variable-length lists. Traversal algorithms similarly process fixed-size batches of rays instead of streaming workloads, accepting that padding may introduce some redundant computation in exchange for deterministic memory usage and instruction-level parallelism.
+
+\subsection{Dedicated Ray Tracing Hardware Cores}
+
+Modern \glspl{gpu} provide dedicated ray tracing units, exposed through \glspl{api} such as NVIDIA OptiX~\sidecite{Parker2010}. Intersection-heavy workloads in radio propagation can be mapped to these \glspl{api} for substantial acceleration relative to software-only \gls{bvh} traversal. Although originally designed for computer graphics, several radio-propagation-oriented ray tracing tools, such as Opal~\sidecite{EgeaLopez2021}, use the NVIDIA OptiX \gls{api} for efficient path validation. However, NVIDIA OptiX is designed for the forward ray tracing pass only and does not support automatic differentiation. As a result, it cannot be used directly for differentiable ray tracing, and custom ray tracing kernels are required to support both forward and backward passes. Tools such as Mitsuba~3~\sidecite{Jakob2022Mitsuba3} address this by combining \gls{ad} frameworks (here, Dr.Jit~\sidecite{Jakob2022DrJit}) with NVIDIA OptiX for efficient differentiable ray tracing on \glspl{gpu}. Although Mitsuba~3 is designed for computer graphics applications, it provides the necessary building blocks (such as polarization states through Jones vectors) to be adapted to radio propagation by modifying the underlying physical models and interaction types; Sionna~RT~\sidecite{Hoydis2023} is a representative example of this adaptation.
+
+\subsection{Just-in-Time Compilation, Gradient Checkpointing, and Rematerialization}
+
+When building complex simulation tools such as ray tracers, high-level Python code improves development productivity but is often too slow for large-scale workloads. \gls{jit} compilation bridges this gap by translating high-level operations into specialized routines tailored to the target hardware.
+
+In DiffeRT~\sidecite{Eertmans2025ICMLCNDemo}, this raw execution speed is achieved through JAX, which relies on the \gls{xla} compiler to transform high-level mathematical operations into highly optimized machine code. When a function is transformed using \texttt{jax.jit}, JAX executes a tracing pass using abstract tracer objects to record the sequence of operations into an intermediate language known as \textit{jaxpr}. \gls{xla} then compiles this intermediate representation.
+
+The performance benefits of \gls{jit} compilation for path tracing are twofold:
+\begin{itemize}
+  \item Through \emph{elimination of Python overhead}, path tracing can execute complex conditional logic and mathematical sequences for millions of independent rays without the interpreter in the execution path, allowing the simulation to run at native hardware speeds.
+  \item Through \emph{operator fusion}, \gls{xla} identifies adjacent operations and combines them into a single unified operation. Because of this, intermediate values remain in fast on-chip memory (registers) instead of being repeatedly written to and read from slower global memory, which mitigates bandwidth bottlenecks.
+\end{itemize}
+
+Although \gls{jit} compilation is widely used to maximize throughput, large-scale differentiable simulations remain constrained by memory. Tracking every step of a computation for gradient evaluation---for example, to quantify how a small geometric perturbation affects a reflected path---can require storing very large volumes of intermediate data.
+
+When memory limits are reached, gradient checkpointing (or rematerialization) provides a practical solution. Instead of storing all intermediate values, the system retains selected checkpoints and recomputes missing intermediates when needed. This trades additional computation for substantially lower peak memory usage.
+
+Technically, gradient checkpointing and rematerialization address these memory bottlenecks by discarding forward intermediates and recomputing them during backpropagation. This increases computation but substantially reduces peak memory, a crucial trade-off when evaluating deep computational graphs such as those generated by multi-bounce ray tracing. In the context of the JAX framework, this mechanism is accessed via the \texttt{jax.checkpoint} decorator (also aliased as \texttt{jax.remat}).
+
+Together, \gls{jit} compilation and gradient checkpointing form the foundation of an efficient differentiable ray tracer: \texttt{jax.jit} ensures that both the forward pass and the rematerialized backward computations run with high hardware utilization, while \texttt{jax.remat} helps peak memory usage scale more gracefully with the number of simulated ray interactions. Importantly, these optimizations remain largely transparent to the user, who can continue writing code in a natural high-level style without manually managing memory or parallelism.
+
+\subsection{Example: \glsentryshort{gpu}-Aware Path Tracing Formulation}\labsec{gpu-path-tracing}
+
+Building on the previous chapters, we now discuss how to reformulate path tracing for efficient \gls{gpu} execution. In particular, path finding can be cast as a tensor optimization problem solved with a fixed number of custom \gls{bfgs} updates directly on the \gls{gpu}, enabling thousands of paths to be processed in parallel~\sidecite{Eertmans2025EuCAP}.
+
+The key challenge for \gls{gpu} execution is not the convex formulation itself (introduced in \refch{path-tracing}), but enforcing a computation graph with static shape and predictable control flow. In practice, this requires two constraints.
+
+First, every path in a batch must use the same parameter dimension, even when interaction sequences mix reflections and diffractions in arbitrary order. A practical implementation sets $d=2$ for all interactions and represents edge diffraction with a zero second basis vector ($\bsit{A}_{i,2}=\mathbf{0}$). This preserves a single tensor layout for all candidates and avoids per-path shape changes, which would otherwise trigger recompilation and reduce vectorization efficiency.
+
+Second, the iterative solver must run for a fixed number of iterations. If each path were allowed to stop on its own convergence criterion, parallel execution would still be paced by the slowest path in the batch. A fixed budget yields deterministic latency, stable memory usage, and better hardware utilization, at the cost of a controlled amount of extra work for easy paths.
+
+Because the path-length objective is convex in the considered planar reflection--diffraction setting, quasi-Newton schemes such as \gls{bfgs} are particularly effective. They exploit gradient information to build a local curvature model while avoiding explicit Hessian construction, yielding a favorable compromise between robustness and throughput for large batches.
+
+Once the problem shape is fixed, additional low-level optimizations become possible. In particular, analytic expressions for the objective gradient can be precomputed and reused in both the forward solver and the custom vector--Jacobian product rule introduced in \refch{drt}, reducing autodiff overhead. Likewise, specialized search-direction and step-size updates can be designed for this convex structure, further lowering per-iteration cost.
+
+With these constraints and optimizations combined, Fermat-based path solvers approach image-method runtimes while supporting more general interaction sequences, including mixed reflection--diffraction paths~\sidecite{Eertmans2025EuCAP}. The full JAX-based implementation of this solver is available at \url{https://github.com/jeertmans/fpt-jax}.
+
+\section{Efficacy of Exact Path Tracing Methods}\labsec{efficacy-exact-path-tracing}
+
+Evaluating the efficiency of point-to-point ray path-finding algorithms exposes fundamental trade-offs between the types of supported interactions, execution speed, differentiability, and modern hardware acceleration paradigms. In this section, we analyze the performance of various exact and Fermat-based solvers, demonstrated through a quantitative benchmark study.
+
+\subsection{Baseline Method Evaluation}
+
+We compare two primary path-finding approaches, each presenting distinct architectural characteristics:
+\begin{itemize}
+  \item The \emph{\gls{im}}, as established in \refsec{image-method}, is an exact, non-iterative formulation that guarantees the recovery of all valid paths. It remains extremely fast, but it is strictly limited to purely specular reflections and cannot scale to model diffractions or transmissions.
+  \item The \emph{Fermat-based approaches}, as established in \refsec{fermat-based} and further studied in this chapter, are iterative optimization-based formulations that can model mixed reflection--diffraction paths.
+\end{itemize}
+
+The \glsxtrlong{mpt} method is not considered in this comparison, as its object-oriented structure makes it inherently sequential and unsuitable for parallel hardware acceleration.
+
+\subsection{The \glsentryshort{gpu} Implementation Dilemma (Uniformity versus Accuracy)}
+
+Implementing Fermat-based optimization on parallel hardware accelerators highlights a key dilemma between execution uniformity and optimization accuracy:
+\begin{itemize}
+  \item The method proposed by Carluccio and Albani~\sidecite{Carluccio2008}, at least in its extended version to model reflections and diffractions~\sidecite{Puggelli2014}, uses a mixed-method solver, combining the exact image method for specular reflections with a Newton-based iterative solver for diffraction edges. Although highly accurate, it dynamically reconstructs the optimization problem based on the specific sequence of interactions along each path. This dynamic control flow introduces heavy branching logic, reducing \gls{gpu} warp execution efficiency.
+  \item In~\sidecite{Eertmans2025EuCAP}, a uniform computational framework is proposed that treats the entire path as a single optimization problem. By setting a fixed interaction dimension ($d=2$) for all interactions and padding straight edges with a zero second basis vector ($\bsit{A}_{i,2}=\mathbf{0}$), the solver maintains a static tensor layout. While this eliminates branching and maximizes \gls{gpu} throughput, it also introduces more variables than strictly necessary, increasing both the computational cost per iteration and the risk of suboptimal convergence for complex paths.
+\end{itemize}
+
+\subsection{Benchmark Findings}
+
+We compare several Fermat-based solvers against the exact image method baseline, all implemented within the uniform computational framework described above. The evaluated solvers include a standard \glsxtrfull{gd}, the Newton-like approach of \gls{ca}, the optimized \gls{bfgs} method (JE) proposed in~\sidecite{Eertmans2026EuCAP}---which employs fixed-point iteration to determine the optimal step size at each solver iteration---and a naive \gls{lbfgs} implementation to highlight the impact of domain-specific optimizations. For diffraction-only scenarios, the image method cannot be used, so an advanced \gls{socp}-based solver is used instead (executed on the \gls{cpu} for reasons detailed below). The simulations were conducted on an NVIDIA GeForce RTX\texttrademark{} 3070 \gls{gpu} with \qty{8}{\giga\byte} of memory using single-precision floating-point arithmetic, and the average error was evaluated over 1000 random path scenarios.
+
+\begin{figure*}[t]
+  \centering
+  \inputtikz{fpt-benchmarks}
+  \caption{Computational time versus solution accuracy across 1000 randomly generated path instances, with interaction order $K$ ranging from 1 to 5, reproduced from~\cite[Fig.~2]{Eertmans2026EuCAP}. The upper subplot presents one-dimensional diffraction scenarios, while the lower depicts two-dimensional reflection cases. Lighter dashed curves in the top subplot show diffractions handled with $d=2$ by our solver alone; comparable methods fail in these configurations. Similarly, the bottom subplot shows hybrid reflection--diffraction paths (lighter dashes) exclusively solved by our method. Two variants are evaluated: the standard configuration and an enhanced version with 64 fixed-point refinements per step (JE-64). The image method serves as a reference baseline for reflection cases, marked with a vertical line indicating its average runtime.}
+  \labfig{perf}
+\end{figure*}
+
+\reffig{perf} summarizes the average error on the true geometrical ray path $\bsit{X}^\star$ versus execution time for interaction orders $K$ from 1 to 5. In homogeneous, diffraction-only configurations ($d=1$, top row), the JE solver achieves the lowest error and fastest convergence across all cases. Increasing the fixed-point iteration budget (JE-64) enables convergence down to machine precision. In reflection-only scenarios (bottom row), the image method remains the most efficient, achieving comparable or better accuracy with runtimes an order of magnitude lower than the iterative alternatives. Nonetheless, among the iterative solvers, the JE solver consistently delivers higher accuracy in less time than both \gls{ca} and \gls{lbfgs} for $K > 1$. Finally, in mixed reflection--diffraction configurations (dashed curves in the bottom row of \reffig{perf}), the JE solver also converges the fastest, but all solvers stagnate around an error rate of $10^{-2}$. This is significantly higher than the single-precision machine epsilon (approximately $10^{-6}$) and may be insufficient for practical applications requiring high precision.
+
+\subsubsection{Speed Gains of Implicit Differentiation}
+
+As discussed in \refsec{drt-implicit-diff}, differentiating through an iterative solver can be computationally expensive. Implicit differentiation provides an alternative to standard automatic differentiation, enabling much more efficient gradient computations. We investigate this by comparing the execution times of implicit differentiation against standard automatic differentiation under various solver configurations.
+
+As shown in \reffig{impl-vs-auto}, implicit differentiation is nearly tenfold faster than standard \gls{ad} for gradient computation. Crucially, this speedup is maintained regardless of the solver iteration budget (16 versus 128) or the number of fixed-point refinements per step (1 versus 64).
+
+\begin{figure}[h]
+  \centering
+  \inputtikz{fpt-impl-vs-auto}
+  \caption{Runtime comparison for gradient computation of 1000 path lengths relative to object parameters, contrasting implicit differentiation (solid curves) with \gls{ad} (dashed curves), plotted against the count of interactions $K$, with $d=2$. Results shown for solver configurations employing either 16 or 128 iterations, combined with 1 or 64 fixed-point refinements per step, are reproduced from~\cite[Fig.~3]{Eertmans2026EuCAP}.}
+  \labfig{impl-vs-auto}
+\end{figure}
+
+\subsection{Future Work and Open Questions}
+
+Resolving convergence issues in mixed reflection--diffraction paths remains an active area of research:
+\begin{itemize}
+  \item Reformulating path-length minimization as a convex conic optimization problem shows promise in resolving mixed-path convergence issues. In fact, on the \gls{cpu}, the ECOS~\sidecite{Domahidi2013} \gls{socp} solver outperforms all quasi-Newton methods in terms of convergence speed and accuracy. This is likely because recasting the problem as an \gls{socp} regularizes the square-root terms arising from Euclidean distances, transforming the optimization landscape. However, solving \glspl{socp} natively and efficiently on \glspl{gpu} is a nascent research area, and general-purpose, differentiable, \gls{gpu}-compatible \gls{socp} solvers are not yet widely available. Furthermore, many \gls{cpu} solvers are designed for double-precision floating-point arithmetic, which is typically not natively or efficiently supported on \glspl{gpu}; porting these algorithms to single-precision is often non-trivial.
+  \item Another key question is whether a uniform solver is the most effective choice, or if the overhead of dynamically compiling specialized kernels for each path configuration is justified by the resulting gains in accuracy and performance. If compilation is sufficiently fast and the number of encountered path configurations is small (as is typical in ray tracing tools that limit diffraction or refraction to a single interaction), then the specialized approach proposed in~\sidecite{Puggelli2014} might be preferable.
+\end{itemize}
+
+\section{Software Landscape and Recommendations}\labsec{software-landscape}
+
+A very relevant question the reader might have at this point is: \enquote{which ray tracing software tool should I use?} The answer depends on the specific requirements of the project, such as the need for differentiability, the types of interactions to be modeled, and the available computational resources. In this section, we provide a brief overview of the current software landscape for ray tracing in wireless communications and offer recommendations based on different use cases.
+
+\subsection{The Landscape}
+
+The choice of ray tracing software depends on user constraints, including budget, specific use cases, and performance requirements. While proprietary commercial solutions offer high performance, the open-source ecosystem is relatively small but growing rapidly. Moreover, the number of differentiable ray tracing tools is extremely small; at the time of writing, Sionna~RT~\sidecite{Hoydis2023} and DiffeRT~\sidecite{Eertmans2025ICMLCNDemo} are likely the only two open-source differentiable ray tracing frameworks designed for radio propagation. Differentiable ray tracing is a relatively new research area, especially in wireless communications, and building such tools typically requires rewriting existing simulation logic from the ground up to support end-to-end automatic differentiation, as discussed in \refsec{new-code-vs-legacy}.
+
+\subsection{Primary Recommendation: Sionna~RT}
+
+While commercial and, to a lesser extent, open-access ray tracing tools have been extensively used for decades by both the academic and industrial communities, the open-source Sionna link-level simulator and its ray tracing module, Sionna~RT, offer a highly comprehensive and efficient solution. Currently, Sionna~RT represents the most complete and high-performance library for general-purpose differentiable radio propagation modeling. Since its version 1 release, Sionna~RT builds on the differentiable rendering framework Mitsuba 3~\sidecite{Jakob2022Mitsuba3} and its companion \gls{jit} compiler, Dr.Jit~\sidecite{Jakob2022DrJit}, natively leveraging hardware-accelerated specialized ray tracing cores via NVIDIA OptiX to achieve exceptionally fast ray--object intersections on \glspl{gpu}. Sionna~RT supports a wide range of propagation interactions, including reflections, diffractions, and transmissions, and provides a flexible \gls{api} for defining custom materials and complex 3D scenes. Furthermore, it integrates seamlessly with the broader Sionna simulation framework, enabling end-to-end optimizations of wireless systems that couple physical-layer components with accurate radio propagation channels.
+
+\subsection{An Alternative: DiffeRT}
+
+DiffeRT is an open-source differentiable ray tracing toolbox developed by the author of this book. Building on its 2D predecessor, DiffeRT2d~\sidecite{Eertmans2024JOSS}, it leverages the JAX~\sidecite{Jax2018} framework and the Equinox machine learning library to offer a 3D differentiable ray tracing solution natively scalable to \glspl{gpu} and other hardware accelerators. Unlike broader frameworks such as Sionna, DiffeRT focuses exclusively on core, geometrical ray tracing functionalities. It features both a low-level \gls{api} for fine-grained path tracing and a high-level \gls{api} for electromagnetic field computations, offering users the flexibility to either compute all paths in a scene or trace user-defined subsets of path candidates. It also integrates multiple visualization backends and provides compatibility with Sionna scene files. Unfortunately, DiffeRT is currently unable to match the extensive feature set and execution speed of Sionna~RT, the latter being primarily a consequence of its JAX-based architecture rather than the specialized rendering compilation pipeline of Dr.Jit. While DiffeRT's functional design facilitates rapid prototyping, its reliance on JAX and \gls{xla} leads to significant compilation overheads for complex scenes compared to dedicated rendering compilers, as discussed in the next subsection.
+
+\subsection{The \glsentryshort{jit} Compiler Mismatch}
+
+The difference in performance between Sionna~RT and DiffeRT highlights a fundamental compiler mismatch:
+\begin{itemize}
+  \item DiffeRT is built on JAX~\sidecite{Jax2018} and compiles code using \gls{xla}. JAX and \gls{xla} are optimized for machine learning workloads, which typically feature shallow computational graphs with heavy, dense tensor operations (e.g., matrix multiplications). Ray tracing, however, consists of massive, deeply nested graphs filled with lightweight, control-flow-heavy geometric operations (e.g., ray--triangle intersections). Tracing this in JAX results in large graph representations, leading to high compilation times, suboptimal kernel fusion, and a lack of support for dedicated hardware ray tracing cores. Another major issue is that JAX's \gls{jit} compiler cannot fuse operations to reduce memory usage during ray tracing, meaning that parallelized ray--triangle intersection tests on large scenes create significant memory overheads and allocation issues.
+  \item Sionna~RT leverages Dr.Jit, a \gls{jit} compiler specifically designed for differentiable rendering and ray tracing. Dr.Jit naturally compiles ray tracing workloads, merges ray--object intersection passes, and targets hardware ray tracing cores through NVIDIA OptiX, resolving this compiler mismatch.
+\end{itemize}
+
+Consequently, a direct benchmark comparison between DiffeRT and Sionna~RT is not currently meaningful at large scene scales. Because DiffeRT relies on JAX and \gls{xla}, its compilation overhead grows rapidly with scene complexity and interaction depth, which limits its scalability in comparison to the large environments that Sionna~RT handles efficiently. Therefore, the two tools should be compared primarily in terms of their design philosophies and targeted use cases rather than via runtime benchmarks.
+
+\subsection{Niche for DiffeRT}
+
+Despite Sionna~RT's features and performance advantages, DiffeRT remains highly relevant for specific scenarios. It is particularly suited for theoretical research into ray geometry, custom differentiable formulations, or projects that require tight integration with JAX-based optimization workflows (such as deep reinforcement learning or custom neural network architectures). Thanks to DiffeRT's functional programming approach, exposed lower-level routines, and simplified object representation, users can easily modify the ray tracing logic and compose custom pipelines. This composable structure makes it straightforward to study differentiability with respect to arbitrary parameters---such as building corner coordinates or custom electromagnetic parameters---that are not natively or easily differentiable in Sionna~RT due to its deep integration with Mitsuba 3.
+
+\subsection{Future Outlook}
+
+As \gls{jit} compiler technologies evolve, the boundary between general machine learning compilers and rendering-specific compilers may become less distinct. Although the current landscape is dominated by Sionna~RT, the limitations and tool characteristics described here represent a temporary snapshot in a rapidly evolving ecosystem. Future iterations of general-purpose machine learning compilers may natively support specialized ray tracing hardware cores, potentially narrowing the performance gap between general-purpose machine learning libraries and specialized rendering frameworks, and opening up new possibilities for differentiable radio propagation tools.
+
+\section{Conclusion}
+
+This chapter has addressed the computational bottlenecks that appear when ray tracing is scaled to realistic wireless scenarios. We first showed why exhaustive candidate generation is intractable, then introduced pruning mechanisms---facet/object merging, unreachable-object masking, and visibility preprocessing---to reduce the candidate set before expensive validation. We also discussed how these ideas extend to dynamic scenarios, where precomputed static visibility and local path extrapolation can reduce full recomputation frequency.
+
+At the geometric-kernel level, we reviewed efficient ray--object intersection and acceleration structures, highlighting the role of Möller--Trumbore intersection tests and the practical trade-offs between $k$-d trees and \glspl{bvh}. At the hardware level, we emphasized that modern \gls{gpu} ray tracing is largely constrained by memory behavior and control-flow regularity, which motivate static-shape formulations, \gls{jit} compilation, and rematerialization strategies for differentiable workloads.
+
+Finally, we showed how Fermat-based path solvers can be reformulated for efficient batched execution by enforcing fixed interaction dimensionality and fixed iteration budgets, while leveraging convexity to use robust quasi-Newton updates such as \gls{bfgs}. Combined with analytic-gradient reuse and custom update rules, this substantially narrows the runtime gap with image-method baselines while supporting mixed reflection--diffraction paths. Further gains are expected by porting existing \gls{socp} solvers, like ECOS, to \gls{gpu} programs and differentiable frameworks, allowing the path tracing problem to be rewritten in a way that can be solved more efficiently. These efficiency mechanisms provide the computational basis for \refch{applications}, where we move from channel forward modeling in a classical urban street-canyon scenario to inverse tasks such as localization and material calibration.

@@ -1,0 +1,51 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{siunitx}
+% \usepgfplotslibrary{groupplots}
+% INCLUDE ../data/ch6-inverse-localization-optimization.txt relto ../main.tex
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={
+        group size=3 by 1,
+        horizontal sep=1.4cm,
+      },
+      width=4.2cm,
+      xlabel={Optimization step},
+      ylabel style={yshift=-4pt},
+      grid=major,
+      xmajorgrids=true,
+      ymajorgrids=true,
+      ticklabel style={/pgf/number format/fixed},
+      xlabel={Optimization step},
+      legend style={font=\footnotesize},
+    ]
+    \nextgroupplot[
+      title={Localization loss},
+      ylabel={Loss},
+      ymode=log,
+    ]
+    \addplot[thick, color=red]
+    table[x=step, y=loss, col sep=comma] {data/ch6-inverse-localization-optimization.txt};
+
+    \nextgroupplot[
+      title={Estimated $x$-position},
+      ylabel={$x$-coordinate (\unit{\meter})},
+      legend pos=south east,
+    ]
+    \addplot[thick, color=blue, forget plot]
+    table[x=step, y=rx_x_m, col sep=comma] {data/ch6-inverse-localization-optimization.txt};
+    \addplot[thick, dashed, color=black]
+    coordinates {(1,10) (400,10)};
+    \legend{Reference}
+
+    \nextgroupplot[
+      title={Estimated $y$-position},
+      ylabel={$y$-coordinate (\unit{\meter})},
+    ]
+    \addplot[thick, color=blue, forget plot]
+    table[x=step, y=rx_y_m, col sep=comma] {data/ch6-inverse-localization-optimization.txt};
+    \addplot[thick, dashed, color=black]
+    coordinates {(1,0) (400,0)};
+    \legend{Reference}
+  \end{groupplot}
+\end{tikzpicture}

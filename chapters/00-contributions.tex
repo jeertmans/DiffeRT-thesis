@@ -1,0 +1,113 @@
+\chapter{Contributions}\labch{contributions}
+
+This chapter provides a comprehensive overview of the original contributions made during my thesis research.
+
+\section{Core Methodological Contributions}
+
+The primary focus of this thesis was the modernization of radio propagation modeling through differentiable programming and machine learning. The core methodological contributions can be summarized as follows:
+
+\begin{itemize}
+  \item I developed the \emph{\glsxtrlong{mpt}} method for exact multipath computation. Paths are formulated as a constrained minimization problem that uses per-interaction constraints, enabling flexible handling of complex geometries such as spheres and metasurfaces. While computationally more expensive than Fermat-based approaches, this method is well-suited for small-scale simulations requiring geometric flexibility.
+
+  \item I introduced a physics-inspired formulation for smoothing hard visibility discontinuities in differentiable ray tracing. This technique eliminates zero-gradient plateaus caused by visibility transitions and enables stable optimization in heavily shadowed propagation scenarios.
+
+  \item In collaboration with Profs. Vittorio Degli-Esposti and Enrico Maria Vitucci, I introduced \glsxtrlongpl{mlm}, a novel representation of the spatial distribution of multipath interactions. Based on the concept of \emph{multipath lifetime}, this representation quantifies the stability of interactions with respect to small scene perturbations.
+
+  \item With Dr. Nicola Di Cicco and Profs. Vittorio Degli-Esposti and Enrico Maria Vitucci, I developed a machine-learning-assisted ray tracing method using generative flow networks to predict valid interaction sequences. This approach reduces reliance on exhaustive enumeration while learning geometrical rather than electromagnetic properties, operating alongside (not replacing) the ray tracer. Early results demonstrate promising potential for accelerating large-scale simulations and motivate its applicability to variable scene sizes.
+
+  \item With Sophie Lequeu and Prof. Benoît Legat, I developed a \glsxtrshort{gpu}-efficient differentiable path tracing framework using fixed-iteration optimization on planar diffraction--reflection sequences. Implicit differentiation is used to shorten the automatic differentiation path, enabling efficient gradient computation while maintaining parallelism and bounded memory.
+
+\end{itemize}
+
+\section{Scientific Publications}
+
+In addition to the publications listed below, I have also contributed to the not-yet-published book of the \gls{cost} \gls{interact} action. More specifically, I co-wrote the section on machine learning techniques applied to the modeling of radio propagation. Several publications below were first shared as reports within the aforementioned \gls{cost} action.
+
+\begin{refsection}
+  \nocite{Eertmans2026NPJWT,Eertmans2026EuCAP,Eertmans2025ICMLCN,Eertmans2025ICMLCNDemo,Eertmans2025EuCAP,Eertmans2024EuCAP,Eertmans2023EuCAP,Eertmans2023JOSE,Eertmans2024JOSS}
+
+  \defbibheading{pubtype}{\textbf{#1}}
+  {
+    \renewbibmacro*{pageref}{}
+
+    \printbibliography[heading=pubtype,title={\faBook{}\,{Preprints}},type=unpublished]
+
+    \printbibliography[heading=pubtype,title={\faUsers{}\,{Conference Proceedings}},type=inproceedings]
+
+    \printbibliography[heading=pubtype,title={\faFile*[regular]{}\,{Journal Articles}},type=article]
+  }
+
+  Each of the publications listed above was accompanied by open-source code and tutorials, enabling readers to reproduce the results and figures presented in the papers.
+
+  Finally, although it did not result in a publication, I developed a fast graph traversal algorithm for generating path candidates in DiffeRT, as discussed in \refappendix{path_candidates}. For performance reasons, I implemented this algorithm in Rust and integrated it into the Python codebase using PyO3. The Rust and Python implementations are both open source, and the latter is packaged as \href{https://pypi.org/project/differt-core/}{\texttt{differt-core}} and contains other performance-critical components of DiffeRT, such as scene-file parsers, that cannot be efficiently implemented in JAX.
+
+  \section{Conferences, Scientific Workshops, Seminars, and Visits}
+
+  Thanks to the support of my two supervisors and funding instruments like the \gls{fnrs} and the \gls{cost}, I had the opportunity to:
+  \begin{itemize}
+    \item Participate in four international meetings and one doctoral school of the \gls{cost} \gls{interact} action.
+    \item Attend and present at the following conferences: \gls{eucap} 2023 in Florence (Italy), \gls{eucap} 2024 in Glasgow (Scotland), \gls{eucap} 2025 in Stockholm (Sweden), \gls{icmlcn} 2025 in Barcelona (Spain), and \gls{eucap} 2026 in Dublin (Ireland) (\textbf{Best Propagation Paper Award}).
+    \item Attend the following workshops and seminars: the \gls{fnrs}-\gls{cgwa} online in 2021, the 42\textsuperscript{nd} WIC Symposium on Information Theory and Signal Processing in the Benelux in Louvain-la-Neuve (Belgium) in 2022, the Technical Seminar on satcom from the IEEE ComVT Benelux Chapter in Sint-Niklaas (Belgium) in 2022, the \gls{sal} Symposium on 6G in Linz (Austria) in 2023.
+    \item Co-organize the \href{https://sites.google.com/view/pwn2025}{\enquote{Perspectives on Wireless Networks} workshop} in Louvain-la-Neuve (Belgium), with international speakers and attendance from 50+ researchers.
+    \item Visit the University of Siegen (Germany) for two days in July 2023, and the University of Bologna (Italy) for two weeks in April 2024 and for four months in late 2024.
+  \end{itemize}
+
+  All the presentations I have given during these events are available on \href{https://eertmans.be/tags/presentation}{my personal website}\footnote{\url{https://eertmans.be}}. These include slides, papers, and recordings when available.
+
+  \clearpage
+  \section{Open Source Software}
+
+  As a strong advocate for open-source software in research, I have contributed to and maintained several projects supporting my work.
+
+  My most significant projects are:
+  \begin{itemize}
+    \item \textbf{DiffeRT} (\GHRepository{DiffeRT}): I developed and released the DiffeRT library, a differentiable ray tracer designed for my research. It is built on top of JAX to enable high-performance, differentiable code. It is fully open source, along with its 2D variant, DiffeRT2d (\GHRepository{DiffeRT2d}).
+    \item \textbf{Manim Slides} (\GHRepository{manim-slides}): I developed this open-source presentation tool to produce higher-quality presentations at conferences, which you can find on \href{https://eertmans.be/tags/manim-slides/}{my personal website}. I am proud to say that it is used by other researchers and teachers around the world for teaching, conference presentations, or thesis defenses; see \href{https://manim-slides.eertmans.be/latest/gallery.html}{the example gallery}.
+  \end{itemize}
+
+  The \href{https://eertmans.be/projects}{\enquote{Projects} page} on my personal website provides a broader overview of my open-source contributions. The rest of my projects are available on my GitHub profile (\GHProfile), some of which have received significant attention from the community in terms of the number of stars and forks.
+
+  For all my projects, I have dedicated a significant amount of time to ensuring that the code is well-documented, tested, and maintained to facilitate its use by other researchers and developers.
+
+  I also believe that contributing to existing open-source projects is essential for advancing the field. During my thesis, I have contributed code, bug fixes, and documentation to several well-known libraries.
+
+  Here is a list of the most important contributions:
+  \begin{itemize}
+    \item Implementing the missing \texttt{jax.scipy.special.fresnel} function\par (\GHPR{google}{jax}{22843}).
+    \item Adding support for all modes in \texttt{numpy.correlate} for Numba's \glsxtrfull{jit} compilation (\GHPR{numba}{numba}{7543}).
+    \item Working on removing the dependency on FFmpeg in Manim\footnote{While not directly related to my research, this contribution helped me develop Manim Slides, the tool I use to present at conferences and workshops.}\par (\GHPR{ManimCommunity}{manim}{3501}).
+  \end{itemize}
+
+% tex-fmt: off
+I have made many more contributions to various open-source projects, which can be found \href{https://github.com/search?q=author%3Ajeertmans+is%3Amerged+-org%3Ajeertmans+-org%3ALELEC210X+-org%3AUCLOUVAIN-CLUB-ELEC+-org%3AADE-Scheduler+-repo%3Aploum%2Flingi2401+&type=pullrequests}{at this URL} (for printed versions, refer to my GitHub profile).
+% tex-fmt: on
+
+  \clearpage
+  \section{Peer Reviews}
+
+  I have performed peer reviews for the following journals and conferences:
+  \begin{itemize}
+    \item \Glsxtrlong{eucap}: \gls{eucap} 2026 (5 reviews).
+    \item IEEE: Access (5 reviews), Transactions on Vehicular Technology (7 reviews), Antennas and Wireless Propagation Letters (1 review), and Open Journal of the Communications Society (1 review).
+    \item Nature Partner Journals: Wireless Technology (1 review).
+    \item The Open Journal: Journal of Open Source Software (1 review, see \GHIssue{openjournals}{joss-reviews}{9384}).
+  \end{itemize}
+
+  Evidence of my reviews can be found on my ORCID profile: \url{https://orcid.org/0000-0002-5579-5360}.
+
+  \section{In This Book}
+
+  All the figures in this book are original, except for the figures in \nrefsec{history}. These figures are new or modified versions of the original figures in the cited papers, and they were generated from data created with DiffeRT2d, DiffeRT, or Sionna~RT. Due to the nature of this writing, my contributions are spread across several chapters. The following is a non-exhaustive overview of how my publications relate to the content of this book:
+  {\Crefname{subsection}{Section}{Sections}%
+    \begin{itemize}
+      \item The \glsxtrfull{mpt}~\cite{Eertmans2023EuCAP} method is described in \refsec{mpt}.
+      \item The smoothing technique for a \emph{fully differentiable ray tracing framework}~\cite{Eertmans2024EuCAP} and its applications are described in \refsec{drt-discontinuities}.
+      \item The \glsxtrfull{mlm}~\cite{Eertmans2025EuCAP} method is described in \refsec{mlm}.
+      \item The machine-learning-assisted generative path sampling method~\cite{Eertmans2025ICMLCN,Eertmans2026NPJWT} is described in \refsec{ml-assisted-rt}.
+      \item The \glsxtrshort{gpu}-accelerated differentiable path tracing framework~\cite{Eertmans2026EuCAP} is described in \Cref{sec:fermat-based,sec:drt-implicit-diff,sec:gpu-path-tracing}.
+    \end{itemize}
+  }
+
+  This manuscript is written as a textbook and mainly focuses on the qualitative and conceptual aspects of the methods, with a strong emphasis on physical intuition and practical implications. Readers interested in mathematical details, algorithmic implementations, and quantitative results are encouraged to refer to the original publications cited throughout the book. My publications are open access and freely available online through their preprint versions.
+
+\end{refsection}

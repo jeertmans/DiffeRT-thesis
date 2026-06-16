@@ -1,0 +1,29 @@
+% Requires:
+% \usepackage{tikz-3dplot}
+% \usepackage{amsmath}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\widehat{\mathbf{#1}}}
+\tdplotsetmaincoords{65}{110}
+\begin{tikzpicture}[tdplot_main_coords, scale=1.9]
+  \tikzset{point/.style={draw,cross out,thick,inner sep=2pt}}
+  \tikzset{wall-surface/.style={gray,fill opacity=.5,draw=black,draw opacity=0.5,thick,dashed}}
+
+  \coordinate (O) at (0,0,0);
+
+  % --- Draw RIS Surface (xy-plane) ---
+  \fill[wall-surface] (-2,-1.5,0) -- (2,-1.5,0) -- (2,1.5,0) -- (-2,1.5,0) -- cycle;
+  \node[below of=O,node distance=1em] {$\nabla\Phi_m(\bsup{x}_r)$};
+
+  % --- Vectors ---
+  % Normal vector (pointing up in Z)
+  \draw[->, thick] (O) -- (0,0,1.5) node[above] {$\uvec{n}$};
+
+  % Incident ray
+  \node[point,label=above:{Source}] (Tx) at (-1.2, 1.2, 0) {};
+  \draw[<-, very thick] (O) -- (Tx) node[midway,sloped,above] {$\bsup{s}^i$};
+
+  % Reflected ray (Anomalous reflection, arbitrary angle)
+  \node[point,label=left:{$\bsup{P}$}] (Rx) at (-0.8, -1.1, 1.1) {};
+  \draw[->, very thick] (O) -- (Rx) node[midway,sloped,below] {$\bsup{s}^r$};
+\end{tikzpicture}

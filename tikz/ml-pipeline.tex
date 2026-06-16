@@ -1,0 +1,70 @@
+% Requires:
+% \usetikzlibrary{calc}
+% \usetikzlibrary{positioning}
+% \providecommand{\glsxtrshort}[1]{#1}
+\begin{tikzpicture}[
+    node distance=1.0cm and 0.35cm,
+    % Styles
+    block/.style={
+      rectangle,
+      draw=black,
+      fill=gray!20,
+      text width=1.8cm,
+      align=center,
+      minimum height=1cm,
+      rounded corners,
+      thick,
+      font=\footnotesize,
+    },
+    ml_block/.style={
+      block,
+      draw=blue,
+      fill=blue!20,
+    },
+    ex_block/.style={
+      block,
+      draw=red,
+    },
+    line/.style={draw, ->, thick},
+    label_text/.style={font=\bfseries\footnotesize, align=left}
+  ]
+
+  % --- Traditional Pipeline (Top Row) ---
+  \node[block] (t_scene) {Scene\\model};
+  \node[ex_block, right=of t_scene] (t_enum) {Exhaustive\\enumeration};
+  \node[block, right=of t_enum] (t_tra) {Path\\tracing};
+  \node[block, right=of t_tra] (t_val) {Geometric\\validation};
+  \node[block, right=of t_val] (t_em) {Electromagnetic\\fields};
+
+  % Arrows Top
+  \draw[line] (t_scene) -- (t_enum);
+  \draw[line] (t_enum) -- (t_tra);
+  \draw[line] (t_tra) -- (t_val);
+  \draw[line] (t_val) -- (t_em);
+
+  % Label Top
+  \node[above=0.1cm of t_tra, label_text] {Traditional exhaustive ray tracing pipeline};
+  \node[below=0.05cm of t_enum, font=\scriptsize, color=red] {$\mathcal{O}(N^K)$ paths};
+
+  % --- ML Pipeline (Bottom Row) ---
+  % Position relative to top row to ensure alignment
+  \node[block, below=1.8cm of t_scene] (m_scene) {Scene\\model};
+  \node[ml_block, right=of m_scene] (m_gen) {Generative\\path sampler};
+  \node[block, right=of m_gen] (m_tra) {Path\\tracing};
+  \node[block, right=of m_tra] (m_val) {Geometric\\validation};
+  \node[block, right=of m_val] (m_em) {Electromagnetic\\fields};
+
+  % Arrows Bottom
+  \draw[line] (m_scene) -- (m_gen);
+  \draw[line] (m_gen) -- (m_tra);
+  \draw[line] (m_tra) -- (m_val);
+  \draw[line] (m_val) -- (m_em);
+
+  % Label Bottom
+  \node[above=0.1cm of m_tra, label_text] {Machine-learning-assisted ray tracing pipeline};
+  \node[below=0.05cm of m_gen, font=\scriptsize, color=blue] {$M \ll N^K$ paths};
+
+  % --- Visual Separator ---
+  \draw[dashed, thick,gray,opacity=0.5] ($(t_scene.south west)!0.5!(m_scene.north west) + (-0.0,0)$) -- ($(t_em.south east)!0.5!(m_em.north east) + (0.0,0)$);
+
+\end{tikzpicture}

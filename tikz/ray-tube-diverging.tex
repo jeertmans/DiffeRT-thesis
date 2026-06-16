@@ -1,0 +1,152 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{amssymb}
+% \usetikzlibrary{angles}
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{decorations.markings}
+% \usetikzlibrary{quotes}
+\begin{tikzpicture}[
+    x=(-10:1),
+    y=(90:1),
+    z=(-150:.35), % Custom 3D perspective
+    >=stealth,
+    scale=0.95,
+  ]
+
+  % Style Definitions
+  \tikzset{
+    mid arrow/.style={
+      postaction={decorate},
+      decoration={
+        markings,
+        mark=at position 0.55 with {\arrow{>}}
+      }
+    }
+  }
+
+  % Parameters
+  \def\rhoOne{3}
+  \def\rhoTwo{6}
+  \def\yRef{0.9}
+  \def\zRef{2.0}
+
+  % Focal Line Coordinates
+  \coordinate (P1) at (-{\rhoTwo}, {\yRef}, 0);
+  \coordinate (P2) at (-{\rhoTwo}, -{\yRef}, 0);
+  \coordinate (P3) at (-{\rhoOne}, 0, {\zRef * (1 - \rhoOne/\rhoTwo)});
+  \coordinate (P4) at (-{\rhoOne}, 0, -{\zRef * (1 - \rhoOne/\rhoTwo)});
+
+  % Wavefront Plotting Macro
+  \newcommand{\drawWavefront}[2]{
+    \pgfmathsetmacro{\S}{#1}
+    \pgfmathsetmacro{\yM}{\yRef * (1 + \S/\rhoOne)}
+    \pgfmathsetmacro{\zM}{\zRef * (1 + \S/\rhoTwo)}
+    \pgfmathsetmacro{\sagCorn}{-(\yM*\yM)/(2*(\S+\rhoOne)) - (\zM*\zM)/(2*(\S+\rhoTwo))}
+
+    \draw[thick] plot[variable=\t, domain=-\zM:\zM, samples=20]
+    ({\S - (\yM*\yM)/(2*(\S+\rhoOne)) - (\t*\t)/(2*(\S+\rhoTwo)) - \sagCorn}, \yM, \t);
+    \draw[thick] plot[variable=\t, domain=-\zM:\zM, samples=20]
+    ({\S - (-\yM*-\yM)/(2*(\S+\rhoOne)) - (\t*\t)/(2*(\S+\rhoTwo)) - \sagCorn}, -\yM, \t);
+    \draw[thick] plot[variable=\t, domain=-\yM:\yM, samples=20]
+    ({\S - (\t*\t)/(2*(\S+\rhoOne)) - (\zM*\zM)/(2*(\S+\rhoTwo)) - \sagCorn}, \t, \zM);
+    \draw[thick] plot[variable=\t, domain=-\yM:\yM, samples=20]
+    ({\S - (\t*\t)/(2*(\S+\rhoOne)) - (-\zM*-\zM)/(2*(\S+\rhoTwo)) - \sagCorn}, \t, -\zM);
+
+    \draw plot[variable=\t, domain=-\zM:\zM, samples=20]
+    ({\S - (\t*\t)/(2*(\S+\rhoTwo)) - \sagCorn}, 0, \t);
+    \draw plot[variable=\t, domain=-\yM:\yM, samples=20]
+    ({\S - (\t*\t)/(2*(\S+\rhoOne)) - \sagCorn}, \t, 0);
+
+    \coordinate (#2_TF) at ({\S}, \yM, \zM);
+    \coordinate (#2_TB) at ({\S}, \yM, -\zM);
+    \coordinate (#2_BF) at ({\S}, -\yM, \zM);
+    \coordinate (#2_BB) at ({\S}, -\yM, -\zM);
+    \coordinate (#2_BC) at ({\S - (\yM*\yM)/(2*(\S+\rhoOne)) - \sagCorn}, -\yM, 0);
+  }
+
+  % Axial Ray and Reference Lines
+  \draw[dashed,thick,->] (-{\rhoTwo-0.5}, 0, 0) -- (\rhoTwo+0.05, 0, 0) node[pos=.08,sloped,align=center] {axial\\ray};
+
+  \draw[dashed,thick,draw=gray] (-{\rhoTwo}, 0, 0) -- (-{\rhoTwo}, 2.5, 0) node[above] {$s=-\rho_2$};
+  \draw[dashed,thick,draw=gray] (-{\rhoOne}, 0, 0) -- (-{\rhoOne}, 2.5, 0) node[above] {$s=-\rho_1$};
+  \draw[dashed,thick,draw=gray] (0, 0, 0) -- (0, 2.5, 0) node[above] {$s=0$};
+  \draw[thick,draw=gray] (0, 0, -0.3) -- ++(0, 0, +0.6);
+  \draw[thick,draw=gray] (0, -0.15, 0) -- ++(0, +0.3, 0);
+  \draw[dashed,thick,draw=gray] (4, -.3, 0) -- (4, 2.5, 0) node[above] {$s=s$};
+  \draw[thick,draw=gray] (4, 0, -0.5) -- ++(0, 0, +1.0);
+  \draw[thick,draw=gray] (4, -0.3, 0) -- ++(0, +0.6, 0);
+
+  \draw[<->] (-{\rhoTwo}, 1.8, 0) coordinate (rhostart) -- (-{\rhoOne}, 1.8, 0) coordinate (rhostop) node[midway, above] {$\rho$};
+  \draw ([yshift=+.8mm]rhostart) -- ([yshift=-.8mm]rhostart);
+  \draw ([yshift=+.8mm]rhostop) -- ([yshift=-.8mm]rhostop);
+
+  % Focal Lines
+  \draw[thick] (P1) -- (P2);
+  \draw[thick] (P3) -- (P4);
+
+  \node[left] at (P1) {1};
+  \node[left] at (P2) {2};
+  \node[below] at (P3) {3};
+  \node[above] at (P4) {4};
+
+  % Draw Wavefronts
+  \drawWavefront{0}{dS0}
+  \drawWavefront{4}{dS}
+
+  % Rays
+  \draw[mid arrow] (P1) -- (P3);
+  \draw[mid arrow] (P1) -- (P4);
+  \draw[mid arrow] (P2) -- (P3);
+  \draw[mid arrow] (P2) -- (P4);
+
+  \draw[mid arrow] (P3) -- (dS0_BF);
+  \draw[mid arrow] (P4) -- (dS0_BB);
+  \draw[mid arrow] (P3) -- (dS0_TF);
+  \draw[mid arrow] (P4) -- (dS0_TB);
+
+  \draw[mid arrow] (dS0_TF) -- (dS_TF);
+  \draw[mid arrow] (dS0_TB) -- (dS_TB);
+  \draw[mid arrow] (dS0_BF) -- (dS_BF);
+  \draw[mid arrow] (dS0_BB) -- (dS_BB);
+
+  % Angles
+
+  % 1. d\varphi_1 arc (Vertical divergence from P3)
+  % Find basis vectors for the vertical plane spanning out from P3
+  \pgfmathsetmacro{\S}{4}
+  \pgfmathsetmacro{\yM}{\yRef * (1 + \S/\rhoOne)}
+  \pgfmathsetmacro{\zM}{\zRef * (1 + \S/\rhoTwo)}
+  \pgfmathsetmacro{\zThree}{\zRef * (1 - \rhoOne/\rhoTwo)}
+
+  \pgfmathsetmacro{\dxOne}{\S + \rhoOne}
+  \pgfmathsetmacro{\dzOne}{\zM - \zThree}
+  \pgfmathsetmacro{\lenOne}{sqrt(\dxOne*\dxOne + \dzOne*\dzOne)}
+  \pgfmathsetmacro{\thetaOne}{atan2(\yM, \lenOne)}
+
+  % Draw in a custom 3D plane anchored at P3
+  \begin{scope}[shift={(P3)}, x={(\dxOne/\lenOne, 0, \dzOne/\lenOne)}, y={(0,1,0)}]
+    \draw[<->] (-\thetaOne:2.0) arc (-\thetaOne:\thetaOne:2.0) node[pos=0.0, above right, font=\footnotesize] {$\mathrm{d}\varphi_1$};
+  \end{scope}
+
+  % 2. d\varphi_2 arc (Horizontal divergence from P1)
+  % Find basis vectors for the sloped horizontal plane from P1 to the P3-P4 line
+  \pgfmathsetmacro{\dxTwo}{\rhoTwo - \rhoOne}
+  \pgfmathsetmacro{\dyTwo}{-\yRef}
+  \pgfmathsetmacro{\lenTwo}{sqrt(\dxTwo*\dxTwo + \dyTwo*\dyTwo)}
+  \pgfmathsetmacro{\thetaTwo}{atan2(\zThree, \lenTwo)}
+
+  % Draw in a custom 3D plane anchored at P1 (y-axis maps to standard 3D z-axis)
+  \begin{scope}[shift={(P1)}, x={(\dxTwo/\lenTwo, \dyTwo/\lenTwo, 0)}, y={(0,0,1)}]
+    \draw[<->] (-\thetaTwo:8) arc (-\thetaTwo:\thetaTwo:8) node[midway, below right, font=\footnotesize] {$\mathrm{d}\varphi_2$};
+  \end{scope}
+
+  % Patch Labels
+  \path (dS0_BF) -- (dS0_TB) node[pos=.05,anchor=south west] {$\mathrm{d}S_0$};
+  \path (dS_BF) -- (dS_TB) node[pos=.15,anchor=west] {$\mathrm{d}S$};
+
+  % Wavefront Text Pointers
+  \draw[<-] (dS0_BF) -- ++(-1.2, -1.0, 0) node[below] {$\{\Psi(0)=\text{Constant}\}$};
+  \draw[<-] (dS_BF) ++(0, -0.05, 0) -- ++(-1.2, -1.0, 0) node[below] {$\{\Psi(s)=\text{Constant}\}$};
+
+\end{tikzpicture}

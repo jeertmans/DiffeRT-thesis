@@ -1,0 +1,25 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepgfplotslibrary{colorbrewer}
+% \pgfplotsset{compat=1.18}
+% \providecommand{\glsxtrshort}[1]{#1}
+% INCLUDE ../data/study-model-embeddings/scene_embeddings_order1.txt relto ../main.tex
+\begin{tikzpicture}
+
+  \begin{axis}[
+      colormap/RdBu-11,
+      xlabel={Component index},
+      colorbar,
+      point meta min=-0.679835,
+      point meta max=0.679835,
+      width=8cm, height=1.2cm,
+      scale only axis,
+      ytick={0, 1},
+      yticklabels={{Basic scene}, {\glsxtrshort{tx}--\glsxtrshort{rx} swapped}},
+      yticklabel style={font=\footnotesize},
+      enlargelimits=false,
+    ]
+    \addplot [matrix plot, mesh/cols=128, point meta=explicit] table [x=col, y=row, meta=val] {data/study-model-embeddings/scene_embeddings_order1.txt};
+    \draw [black, dashed, opacity=0.7] (axis cs:\pgfkeysvalueof{/pgfplots/xmin}, 0.5) -- (axis cs:\pgfkeysvalueof{/pgfplots/xmax}, 0.5);
+  \end{axis}
+\end{tikzpicture}

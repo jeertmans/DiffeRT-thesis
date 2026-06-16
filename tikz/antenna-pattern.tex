@@ -1,0 +1,53 @@
+% Requires:
+% \usepackage{siunitx}
+% \usepackage{pgfplots}
+% \usetikzlibrary{bbox}
+% \usepgfplotslibrary{polar}
+\begin{tikzpicture}[bezier bounding box]
+  \begin{polaraxis}[
+      name=polar,
+      rotate=90,
+      xtick={0,45,...,360},
+      % Calculates symmetrical angles: if tick > 180, subtract from 360
+      xticklabel={%
+        \pgfmathparse{int(\tick>180 ? 360-\tick : \tick)}%
+        \qty[drop-zero-decimal=true]{\pgfmathresult}{\degree}%
+      },
+      xticklabel style={anchor=-\tick-90,font=\footnotesize},
+      y dir=reverse,
+      yticklabel=\empty,
+      width=3.0cm,
+    ]
+    \addplot+[mark=none,thick,domain=-180:180,samples=600]
+    {(1.5 + cos(x)) * abs(cos(x)^2 - 0.3)};
+  \end{polaraxis}
+
+  \begin{axis}[
+      at={(polar.south)},
+      anchor=north,
+      yshift=-0.2cm,
+      view={90}{30},
+      faceted color=blue,
+      %colormap/jet,
+      axis equal,
+      hide axis,
+      width=3.0cm,
+      height=4.0cm,
+      xmin=-1, xmax=1,
+      ymin=-1, ymax=1,
+      %zmin=1.0, zmax=1.2,
+    ]
+    \addplot3 [
+      surf,
+      z buffer=sort,
+      samples=120,
+      samples y=20,
+      domain=0:360, y domain=0:180,
+      ultra thin,
+    ] (
+      {(1.5 + cos(x)) * abs(cos(x)^2 - 0.3) * sin(x) * cos(y)},
+      {(1.5 + cos(x)) * abs(cos(x)^2 - 0.3) * sin(x) * sin(y)},
+      {(1.5 + cos(x)) * abs(cos(x)^2 - 0.3) * cos(x)}
+    );
+  \end{axis}
+\end{tikzpicture}

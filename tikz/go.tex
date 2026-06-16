@@ -1,0 +1,100 @@
+% Requires:
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{decorations.pathreplacing}
+% \usetikzlibrary{fadings}
+\begin{tikzpicture}[
+    x={(-0.6cm,-0.3cm)}, y={(1cm,0cm)}, z={(0cm,1cm)}, % Define 3D coordinate vectors
+    scale=1.2,
+    >=Stealth,
+    font=\footnotesize
+  ]
+
+  % Definitions
+  \def\rhoOne{3}      % Radius of curvature 1 (Horizontal focus)
+  \def\rhoTwo{1.8}    % Radius of curvature 2 (Vertical focus)
+  \def\sDist{3.5}     % Distance s from reference to observation
+  \def\openAngle{0.4} % Opening scale factor for rays
+
+  % Coordinates for the Optical Axis
+  \coordinate (O) at (0,0,0);             % Reference point (s=0)
+  \coordinate (Obs) at (-\sDist,0,0);     % Observation point (s=s)
+  \coordinate (C1) at (\rhoOne,0,0);      % Caustic 1 (Horizontal line)
+  \coordinate (C2) at (\rhoTwo,0,0);      % Caustic 2 (Vertical line)
+
+  % Caustics (Focal Lines)
+  \draw[thick, red!70!black] (\rhoTwo, 0, -0.6) -- (\rhoTwo, 0, 0.6) node[midway, right] {Caustic 2 (Vertical)};
+  \draw[thick, blue!70!black] (\rhoOne, -0.8, 0) -- (\rhoOne, 0.8, 0) node[midway, below right] {Caustic 1 (Horizontal)};
+
+  % Corner Points for Ray Tube
+
+  % Top-Right Ray
+  \coordinate (Ref_TR) at (0, 0.5, 0.4);
+  \coordinate (Obs_TR) at (-\sDist, {0.5 * (\rhoOne+\sDist)/\rhoOne}, {0.4 * (\rhoTwo+\sDist)/\rhoTwo});
+
+  % Top-Left Ray
+  \coordinate (Ref_TL) at (0, -0.5, 0.4);
+  \coordinate (Obs_TL) at (-\sDist, {-0.5 * (\rhoOne+\sDist)/\rhoOne}, {0.4 * (\rhoTwo+\sDist)/\rhoTwo});
+
+  % Bottom-Left Ray
+  \coordinate (Ref_BL) at (0, -0.5, -0.4);
+  \coordinate (Obs_BL) at (-\sDist, {-0.5 * (\rhoOne+\sDist)/\rhoOne}, {-0.4 * (\rhoTwo+\sDist)/\rhoTwo});
+
+  % Bottom-Right Ray
+  \coordinate (Ref_BR) at (0, 0.5, -0.4);
+  \coordinate (Obs_BR) at (-\sDist, {0.5 * (\rhoOne+\sDist)/\rhoOne}, {-0.4 * (\rhoTwo+\sDist)/\rhoTwo});
+
+  % Faint Rays from Caustics to Reference Surface
+  \draw[dashed, opacity=0.4] (C1) -- (Ref_TR);
+  \draw[dashed, opacity=0.4] (C1) -- (Ref_TL);
+  \draw[dashed, opacity=0.4] (C1) -- (Ref_BL);
+  \draw[dashed, opacity=0.4] (C1) -- (Ref_BR);
+
+  % Reference Wavefront (s=0)
+  \fill[fill=green!10, opacity=0.7] (Ref_TR) -- (Ref_TL) -- (Ref_BL) -- (Ref_BR) -- cycle;
+  \draw[green!50!black, thick] (Ref_TR) -- (Ref_TL) -- (Ref_BL) -- (Ref_BR) -- cycle;
+  \node[green!30!black] at (0, 0.7, 0.7) {Ref. Surface ($s=0$)};
+  \node[green!30!black] at (0, 0, 0) {$dS_0$};
+
+  % Tube Walls (Reference to Observation)
+
+  % Back Walls
+  \fill[gray!10, opacity=0.5] (Ref_TL) -- (Obs_TL) -- (Obs_BL) -- (Ref_BL) -- cycle;
+  \fill[gray!20, opacity=0.5] (Ref_BL) -- (Obs_BL) -- (Obs_BR) -- (Ref_BR) -- cycle;
+
+  % Ray Lines
+  \draw[thin, ->] (Ref_TR) -- (Obs_TR);
+  \draw[thin, ->] (Ref_TL) -- (Obs_TL);
+  \draw[thin, ->] (Ref_BL) -- (Obs_BL);
+  \draw[thin, ->] (Ref_BR) -- (Obs_BR);
+
+  % Front Walls
+  \fill[gray!5, opacity=0.3] (Ref_TR) -- (Obs_TR) -- (Obs_TL) -- (Ref_TL) -- cycle;
+  \fill[gray!15, opacity=0.3] (Ref_TR) -- (Obs_TR) -- (Obs_BR) -- (Ref_BR) -- cycle;
+
+  % Observation Wavefront (s=s)
+  \fill[fill=orange!10, opacity=0.7] (Obs_TR) -- (Obs_TL) -- (Obs_BL) -- (Obs_BR) -- cycle;
+  \draw[orange!50!black, thick] (Obs_TR) -- (Obs_TL) -- (Obs_BL) -- (Obs_BR) -- cycle;
+  \node[orange!30!black] at (-\sDist, 0, 0) {$dS(s)$};
+
+  % Axis and Annotations
+
+  % Optical Axis
+  \draw[dashed, thin] (\rhoOne,0,0) -- (-\sDist-1,0,0) node[left] {Ray Trajectory $\hat{s}$};
+
+  % Dimension Lines
+  \draw[<->, blue] (\rhoOne, -1, 0) -- (0, -1, 0) node[midway, below] {$\rho_1$};
+  \draw[dashed, blue, thin] (\rhoOne, -0.8, 0) -- (\rhoOne, -1.1, 0);
+  \draw[dashed, blue, thin] (0, -0.5, -0.4) -- (0, -1.1, 0);
+  \draw[<->, red] (\rhoTwo, 0, -0.8) -- (0, 0, -0.8) node[midway, below] {$\rho_2$};
+  \draw[dashed, red, thin] (\rhoTwo, 0, -0.6) -- (\rhoTwo, 0, -0.9);
+  \draw[dashed, red, thin] (0, 0.5, -0.4) -- (0, 0, -0.9);
+  \draw[<->, black] (0, 1.2, 0) -- (-\sDist, 1.2, 0) node[midway, above] {Distance $s$};
+  \draw[dashed, thin] (0, 0.5, 0.4) -- (0, 1.3, 0);
+  \draw[dashed, thin] (Obs_TR) -- (-\sDist, 1.3, 0);
+
+  % Caustic Labels
+  \draw[<-] (C1) -- ++(0.5, 0.5, 0) node[right, align=left, font=\scriptsize] {Astigmatic Focus 1\\($\rho_1$)};
+  \draw[<-] (C2) -- ++(0.5, -0.5, 0) node[right, align=left, font=\scriptsize] {Astigmatic Focus 2\\($\rho_2$)};
+
+\end{tikzpicture}

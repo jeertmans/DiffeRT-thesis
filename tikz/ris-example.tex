@@ -1,0 +1,53 @@
+% Requires:
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{bending}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\glsxtrshort}[1]{#1}
+\begin{tikzpicture}[scale=0.6,
+    % Define custom styles
+    ray/.style={->,dashed,very thick},
+    surface/.style={thick}
+  ]
+  \definecolor{beamcolor}{RGB}{206, 215, 233}
+
+  \begin{scope}
+    \node at (2.5, 5.5) {Without \glsxtrshort{ris}};
+    \coordinate (rx) at (2.65, 0.7);
+    \fill[beamcolor, opacity=0.8] (0,3) -- (2,5) -- (5,5) -- (5,3) -- cycle;   % Incoming beam
+    \fill[beamcolor, opacity=0.8] (0,3) -- (2,5) -- (2,-0.5) -- (0,-0.5) -- cycle; % Reflected beam
+
+    \node[cross out, draw=black, thick,label=below:{Receiver}] at (rx) {};
+
+    \draw[surface] (0,3) -- (2,5);
+
+    \draw[ray] (4.5, 4.4) -- (1.6, 4.4);
+    \draw[ray] (4.5, 3.5) -- (0.7, 3.5);
+
+    \draw[ray] (1.4, 4.1) -- (1.4, 1.2);
+    \draw[ray] (0.5, 3.2) -- (0.5, 1.2);
+  \end{scope}
+
+  \begin{scope}[shift={(0, -7)}] % Shift the entire right diagram
+    \node at (2.5, 5.5) {With a \glsxtrshort{ris}};
+    \coordinate (rx) at (2.65, 0.7);
+    \fill[beamcolor, opacity=0.8] (0,3) -- (2,5) -- (5,5) -- (5,3) -- cycle; % Incoming beam
+    \fill[beamcolor, opacity=0.8] (0,3) -- (2,5) -- (rx.center) -- cycle;    % Reflected converging beam
+
+    \node[cross out, draw=black, thick,label=below:{Receiver}] at (rx) {};
+
+    \fill[fill=green!15!gray!20!white] (0,3) to[bend left=25] (2,5) -- cycle;
+    \draw[green!40!black, thick, densely dashed] (0,3) to[bend left=25] (2,5);
+
+    \draw[surface] (0,3) -- (2,5) node[above=0.3cm,midway,sloped,inner sep=0pt,font=\footnotesize] {\glsxtrshort{ris}};
+
+    \draw[ray] (4.5, 4.4) -- (1.6, 4.4);
+    \draw[ray] (4.5, 3.5) -- (0.7, 3.5);
+
+    \coordinate (r1) at (1.4, 4.1);
+    \coordinate (r2) at (0.6, 3.3);
+    \draw[ray] (r1) -- ($(r1)!0.7!(rx.center)$);
+    \draw[ray] (r2) -- ($(r2)!0.7!(rx.center)$);
+  \end{scope}
+
+\end{tikzpicture}

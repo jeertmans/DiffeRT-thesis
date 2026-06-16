@@ -1,0 +1,51 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{siunitx}
+% \providecommand{\Gls}[1]{#1}
+% INCLUDE ../data/reflection-path-metrics.txt relto ../main.tex
+% INCLUDE ../data/diffraction-path-metrics.txt relto ../main.tex
+\begin{tikzpicture}
+  \begin{axis}[
+      name=amp,
+      width=5.5cm,
+      xlabel={Delay $\tau$ (\unit{\nano\second})},
+      ylabel={Amplitude $|a_p|$},
+      grid=major,
+      legend to name=sharedpathlegend,
+      legend columns=2,
+      legend style={draw=none},
+      scaled y ticks=false,
+      ymajorgrids=true,
+      xmajorgrids=true,
+    ]
+    \addplot[ycomb, thick, mark=*, mark size=1.7pt, color=red]
+    table[x=delay_ns, y=amplitude, col sep=comma] {data/reflection-path-metrics.txt};
+    \addlegendentry{\Gls{line-of-sight} and reflections}
+
+    \addplot[ycomb, thick, mark=*, mark size=1.7pt, color=orange]
+    table[x=delay_ns, y=amplitude, col sep=comma] {data/diffraction-path-metrics.txt};
+    \addlegendentry{Diffractions}
+  \end{axis}
+
+  \begin{axis}[
+      at={(amp.east)},
+      anchor=west,
+      xshift=2cm,
+      width=5.5cm,
+      name=pow,
+      %height=5.6cm,
+      xlabel={Delay $\tau$ (\unit{\nano\second})},
+      ylabel={Path gain (\unit{\decibel})},
+      grid=major,
+      ymajorgrids=true,
+      xmajorgrids=true,
+    ]
+    \addplot[ycomb, thick, mark=*, mark size=1.7pt, color=red]
+    table[x=delay_ns, y=power_db, col sep=comma] {data/reflection-path-metrics.txt};
+
+    \addplot[ycomb, thick, mark=*, mark size=1.7pt, color=orange]
+    table[x=delay_ns, y=power_db, col sep=comma] {data/diffraction-path-metrics.txt};
+  \end{axis}
+
+  \path (amp.north west) -- (pow.north east) node[draw,midway, yshift=4pt,above,inner sep=2pt] {\pgfplotslegendfromname{sharedpathlegend}};
+\end{tikzpicture}

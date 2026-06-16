@@ -1,0 +1,87 @@
+% Requires:
+% \usepackage{tkz-euclide}
+% \usetikzlibrary{patterns}
+% \providecommand{\glsxtrshort}[1]{#1}
+\begin{tikzpicture}[
+    scale=0.715,
+    % --- Styles ---
+    % TX/RX
+    point/.style={draw, cross out, thick, inner sep=2pt, fill=white},
+    tx/.style={point, label={left:\glsxtrshort{tx}}},
+    rx/.style={point, label={right:\glsxtrshort{rx}}},
+    % Mirrors
+    mirror line/.style={draw, thick, red},
+    mirror hatch/.style={pattern=north east lines, pattern color=black,fill,draw=none,minimum width=0.3,minimum height=0.6},
+    % Paths
+    path/.style={-, draw=green!80!black, thick, opacity=0.75},
+    valid_path_1/.style={path}, % Style for Path 1
+    valid_path_2/.style={path},  % Style for Path 2
+    invalid_path/.style={path,dashed},
+  ]
+
+  % --- Define Coordinates ---
+  \coordinate (TX_c) at (1, 1.0);
+  \coordinate (RX_c) at (7.5, 2.0);
+
+  % Surface O1 (Top Right slanted)
+  \coordinate (O1_A) at (1.5, 3.0); \coordinate (O1_B) at (5.5, 4.0);
+  % Surface O2 (Top Left flat - Invalid)
+  \coordinate (O2_A) at (1, 4.5); \coordinate (O2_B) at (4, 4.5);
+  % Surface O3 (Bottom flat)
+  \coordinate (O3_A) at (1.0, 0.5); \coordinate (O3_B) at (6.5, 0.5);
+
+  % --- Draw Mirrors ---
+  % Define paths for intersections
+  \path[name path=surf_o_1] (O1_A) -- (O1_B);
+  \path[name path=surf_o_2] (O2_A) -- (O2_B);
+  \path[name path=surf_o_3] (O3_A) -- (O3_B);
+
+  % Visual representation
+  \foreach \a/\b/\name/\pos/\hatchangle in {
+    O1_A/O1_B/I_1/above/90,
+    O2_A/O2_B/I_2/above/90,
+    O3_A/O3_B/I_3/below/-90
+  } {
+    \fill[mirror hatch] (\a) -- (\b) -- ($(\b)!-0.1cm!\hatchangle:(\a)$) -- ($(\a)!-0.1cm!-\hatchangle:(\b)$) -- cycle;
+    \draw[mirror line] (\a) -- (\b) node[midway, \pos=1.2mm, sloped, text=black] {$\name$};
+  }
+
+  \node[tx] (TX) at (TX_c) {};
+  \node[rx] (RX) at (RX_c) {};
+
+  % --- GEOMETRIC PATH CALCULATIONS ---
+  \begin{pgfinterruptboundingbox}
+    % --- Path 1: TX -> o1 -> o3 -> RX ---
+    % 1. Image of TX across o1
+    \tkzDefPointBy[reflection=over O1_A--O1_B](TX) \tkzGetPoint{TX_i1};
+    % 2. Image of TX_i1 across o3
+    \tkzDefPointBy[reflection=over O3_A--O3_B](TX_i1) \tkzGetPoint{TX_i1_i3};
+    % 3. Intersection on o3 (P1_2)
+    \path[name path=virt_p1_b,overlay] (TX_i1_i3) -- (RX_c);
+    \path[name intersections={of=surf_o_3 and virt_p1_b, by=P1_2}];
+    % 4. Intersection on o1 (P1_1)
+    \path[name path=virt_p1_a] (TX_i1) -- (P1_2);
+    \path [name intersections={of=surf_o_1 and virt_p1_a, by=P1_1}];
+  \end{pgfinterruptboundingbox}
+  % 5. Draw Path 1
+  \draw[valid_path_1] (TX_c) -- (P1_1) -- (P1_2) coordinate[midway](mid1) -- (RX_c);
+
+  \begin{pgfinterruptboundingbox}
+    % --- Path 2: TX -> o3 -> o1 -> RX ---
+    % 1. Image of TX across o3
+    \tkzDefPointBy[reflection=over O3_A--O3_B](TX) \tkzGetPoint{TX_i3};
+    % 2. Image of TX_i3 across o1 (Changed target to o1)
+    \tkzDefPointBy[reflection=over O1_A--O1_B](TX_i3) \tkzGetPoint{TX_i3_i1};
+    % 3. Intersection on o1 (P2_2)
+    \path[name path=virt_p2_b] (TX_i3_i1) -- (RX_c);
+    \path [name intersections={of=surf_o_1 and virt_p2_b, by=P2_2}];
+    % 4. Intersection on o3 (P2_1)
+    \path[name path=virt_p2_a] (TX_i3) -- (P2_2);
+    \path[name intersections={of=surf_o_3 and virt_p2_a, by=P2_1}];
+  \end{pgfinterruptboundingbox}
+  % 5. Draw Path 2
+  \draw[valid_path_2] (TX_c) -- (P2_1) -- (P2_2) coordinate[midway](mid2) -- (RX_c);
+
+  % --- Invalid Path Hint (TX -> o2) ---
+  \draw[invalid_path] (TX_c) -- ($(O2_A)!0.5!(O2_B)$);
+\end{tikzpicture}

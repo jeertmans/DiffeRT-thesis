@@ -1,0 +1,255 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{decorations.pathreplacing}
+% \usetikzlibrary{shapes.geometric}
+% \providecommand{\glsxtrshort}[1]{#1}
+% \providecommand{\bsit}[1]{\boldsymbol{#1}}
+% \providecommand{\glsxtrshort}[1]{#1}
+\begin{tikzpicture}[
+    scale=0.58,
+    every node/.style={transform shape},
+    MLP/.style={trapezium, trapezium angle=80, draw=black, thick, align=center, text=black, shape border rotate=-180, inner sep=3pt, outer sep=0pt}
+  ]
+  \newcommand\Nobjects{5}
+  \pgfkeys{
+    /tensor/.is family, /tensor,
+    default/.style =
+    {
+      m = 1,
+      n = 1,
+      d = 1,
+      x scale = 1,
+      y scale = 1,
+      x step = 0.5,
+      y step = 0.5,
+      dx = +0.02,
+      dy = +0.02,
+      dz = -0.20,
+      fill = blue!20,
+      line color = blue,
+      line width = 0.25pt,
+      border color = blue,
+      border width = 0.5pt,
+      name = none,
+      anchor = center,
+      at = center,
+    },
+    m/.estore in = \Tm,
+    n/.estore in = \Tn,
+    d/.estore in = \Td,
+    x scale/.estore in = \TxScale,
+    y scale/.estore in = \TyScale,
+    x step/.estore in = \TxStep,
+    y step/.estore in = \TyStep,
+    dx/.estore in = \Tdx,
+    dy/.estore in = \Tdy,
+    dz/.estore in = \Tdz,
+    fill/.estore in = \Tfill,
+    line color/.estore in = \TlineColor,
+    line width/.estore in = \TlineWidth,
+    border color/.estore in = \TborderColor,
+    border width/.estore in = \TborderWidth,
+    name/.estore in = \Tname,
+    anchor/.estore in = \Tanchor,
+    at/.estore in = \Tat,
+  }
+
+  \newcommand\tensor[1][]{%
+    \pgfkeys{/tensor,default,#1}
+    \ifnum\Td>0
+    \foreach \k in {\Td,...,1} {
+      \pgfmathtruncatemacro\i{\k-1}
+      \node[rectangle,anchor=\Tanchor,fill=\Tfill,inner sep=0,shift={(\i*\Tdx,\i*\Tdy,\i*\Tdz)}] (\Tname\i) at (\Tat) {\tikz{\draw[line width=\TlineWidth,color=\TlineColor,fill=\Tfill] (0,0) grid[xstep=\TxStep,ystep=\TyStep] +({(\Tn *
+      \TxScale * \TxStep)},{(\Tm * \TyScale * \TyStep)});}};
+      \draw[line width=\TborderWidth, color=\TborderColor] (\Tname\i.south
+      west) rectangle (\Tname\i.north east);
+    }
+    \fi
+  }
+
+  \node[rectangle,draw,rounded corners,thick,align=center] (input) {Scene\\Model};
+
+  \coordinate (ref) at ($(input.east) + (1.5,0)$);
+  \tensor[m=3,n=3,name=X,d=\Nobjects,anchor=west,at=ref];
+  \coordinate (ref) at ($(X0.north west) + (0,2)$);
+  \tensor[m=1,n=3,name=tx_rx,d=2,anchor=west,at=ref];
+
+  \node[above] at ([yshift=2mm]tx_rx0.north) {\glsxtrshort{tx}, \glsxtrshort{rx}};
+
+  \draw [
+    thick,
+    decoration={
+      brace,
+      mirror,
+      raise=0.05cm
+    },
+    decorate
+  ] (X0.south west) -- (X0.south east)
+  node [pos=0.5,anchor=north,yshift=-0.30cm] {3};
+
+  \draw [
+    thick,
+    decoration={
+      brace,
+      mirror,
+      raise=0.05cm
+    },
+    decorate
+  ] (X0.north west) -- (X0.south west)
+  node [pos=0.5,anchor=east,xshift=-0.30cm] (v) {$V$};
+
+  \draw[->,thick] (input) -- (v) node[pos=.4] (mid) {};
+  \draw[->,thick,rounded corners] (mid.center) |- ([xshift=-1mm]tx_rx0.west);
+
+  \draw [
+    thick,
+    decoration={
+      brace,
+      mirror,
+      raise=0.05cm
+    },
+    decorate
+  ] (X4.north west) -- (X0.north west)
+  node [pos=0.5,sloped,anchor=south,yshift=+0.3cm] {$N$};
+
+  \path (X0.east) -- ++(1.2,0) node[rectangle,draw,rounded corners,thick,align=center,rotate=90] (geom_x) {Geometric Transformation};
+  \draw[<-,thick] (geom_x) -- ([xshift=1mm]X4.east |- X0.east);
+  \draw[<-,thick,rounded corners] (geom_x.east) |- ([xshift=1mm]tx_rx1.east |- tx_rx0.east);
+
+  \coordinate (ref) at ($(geom_x.south) + (1.4,0)$);
+  \tensor[m=5,n=1,name=XP,d=\Nobjects,anchor=west,at=ref];
+
+  \draw [
+    thick,
+    decoration={
+      brace,
+      mirror,
+      raise=0.05cm
+    },
+    decorate
+  ] (XP0.north west) -- (XP0.south west)
+  node [pos=0.5,anchor=east,xshift=-0.30cm] (vp) {$V'$};
+
+  \draw[->,thick] (geom_x) -- (vp);
+
+  \path (XP0.east) -- ++(1.5,0) node[MLP] (mlp_xp) {\glsxtrshort{mlp}};
+  \coordinate (ref) at ($(mlp_xp.east) + (1.3,0)$);
+  \tensor[m=7,n=1,name=Y,d=\Nobjects,anchor=west,at=ref]
+  \draw[<-,thick] (mlp_xp) -- ([xshift=1mm]XP4.east |- XP0.east);
+  \draw[<-,thick] (mlp_xp.north) -- ++(0,.4) node[above] {$\bsit{\theta}$};
+
+  \draw [
+    thick,
+    decoration={
+      brace,
+      mirror,
+      raise=0.05cm
+    },
+    decorate
+  ] (Y0.north west) -- (Y0.south west)
+  node [pos=0.5,anchor=east,xshift=-0.30cm] (d) {$d$};
+
+  \draw[->,thick] (mlp_xp) -- ([xshift=-1mm]d);
+
+  \node[below] at (X0.south |- Y0.south) {$\bsit{X}$ (objects vertices)};
+  \node[below] at (XP0.south |- Y0.south) {$\bsit{X}'$ (equivariant)};
+  \node[below] at (Y0.south) {$\bsit{Y}$ (objects features)};
+
+  \path (Y0.east) -- ++(1.5,0) node[MLP] (deep_sets) {Deep\\Sets};
+  \draw[<-,thick] (deep_sets.north) -- ++(0,.4) node[above] {$\bsit{\theta}$};
+  \draw[<-,thick] (deep_sets) -- ([xshift=1mm]Y4.east |- Y0.east) node[pos=1] (end) {} node[midway] (mid) {};
+  \path (Y0.south) -- (Y0.north) node[pos=0.15] (Y025) {} node[pos=0.95] (Y075) {};
+
+  \coordinate (ref) at ($(deep_sets.east) + (1.5,0)$);
+  \tensor[m=4,n=1,name=scene_feats,d=1,anchor=west,at=ref]
+
+  \draw [
+    thick,
+    decoration={
+      brace,
+      mirror,
+      raise=0.05cm
+    },
+    decorate
+  ] (scene_feats0.north west) -- (scene_feats0.south west)
+  node [pos=0.5,anchor=east,xshift=-0.30cm] (dpp) {$d''$};
+  \draw[->,thick] (deep_sets) -- (dpp);
+
+  \node[below] at (scene_feats0.south |- Y0.south) {$\bsit{z}$ (scene features)};
+
+  \node[inner sep=0pt,label=below:{Init. path candidate}] (pc_init) at ([xshift=4mm]XP0.center |- tx_rx0.center) {$\left[-1, -1, \dots, -1, -1\right]$};
+
+  \draw [
+    thick,
+    decoration={
+      brace,
+      mirror,
+      raise=0.05cm
+    },
+    decorate
+  ] (pc_init.north east) -- (pc_init.north west)
+  node [pos=0.5,anchor=south,yshift=+0.30cm] {$K$};
+
+  \path (pc_init.east) -- ++(1.1,0) node[draw,rounded corners,thick] (insert) {Insert};
+  \draw[<-,thick] (insert) -- ([xshift=1mm]pc_init.east);
+
+  \path[->,thick,rounded corners] (end.center |- Y075.center) -| (mid.center |- insert.center) node[circle, draw=black, thick, inner sep=1pt, font=\bfseries] (mul_feats) {$\times$};
+  \draw[->,thick,rounded corners] (end.center |- Y075.center) -| (mul_feats);
+  \draw[->,thick] (insert) -- (mul_feats) node[pos=0.5] (mid) {};
+  \draw[->,thick] (mid.center) -- ++(0,1.4) node[above] (pc) {Current path candidate};
+  \draw[->,thick] (pc.east) -- ++(.5cm,0) node[rounded corners,draw,thick,align=center,right,fill=gray!20] (pt) {Path\\Tracing};
+  \draw[->,thick] (pt.east) -- ++(.5cm,0) node[rounded corners,draw,thick,align=center,right,fill=gray!20] (gv) {Geometry\\Validation};
+  \draw[->,thick] (gv.east) -- ++(.5cm,0) node[right] (r) {Reward};
+
+  \path (mul_feats.east) -- ++(0.85,0) node[MLP] (pos_enc) {Pos.\\Enc.};
+  \draw[<-,thick] (pos_enc.south) -- ++(0,-.4) node[below] {$\bsit{\theta}$};
+  \draw[->,thick] (mul_feats) -- (pos_enc);
+
+  \coordinate (ref) at (scene_feats0.west |- pos_enc);
+  \tensor[m=3,n=1,name=pc_feats,d=1,anchor=west,at=ref]
+
+  \draw [
+    thick,
+    decoration={
+      brace,
+      mirror,
+      raise=0.05cm
+    },
+    decorate
+  ] (pc_feats0.north west) -- (pc_feats0.south west)
+  node [pos=0.5,anchor=east,xshift=-0.30cm] (dp) {$d'$};
+  \draw[->,thick] (pos_enc) -- (dp);
+
+  %\draw[->] (($(deep_sets.east) + (0.75,.3)$) -- ++(1.2,0) node[circle, draw=black, thick, inner sep=1pt, font=\bfseries] (add_feats) {+};
+
+  \path (scene_feats0.east) -- ++(1.05,0) node[rectangle,draw,rounded corners,thick,align=center,rotate=90] (concat) {Broadcast and concatenate};
+
+  \path (concat.south) -- ++(0.95,0) node[MLP] (flow) {Flow};
+  \draw[<-,thick] (flow.north) -- ++(0,.4) node[above] {$\bsit{\theta}$};
+  \draw[->,thick] (concat) -- (flow);
+  \draw[<-,thick] (concat) -- ([xshift=1mm]scene_feats0.east);
+
+  \path (scene_feats0.east) -- (concat.north) node[pos=0.5] (midway_bend) {};
+  \path (concat.west) -- (concat.east) node[pos=0.25] (concat25) {} node[pos=0.75] (concat75) {};
+
+  \draw[->,thick,rounded corners] (end.center |- Y025.center) -- (concat.north |- Y025.center) node[pos=1] (hit) {};
+
+  \path (concat.north) -- ++($(concat.north) - (hit.center)$) node[pos=1,] (target) {};
+
+  \draw[->,thick,rounded corners] ([xshift=1mm]pc_feats0.east) -- (midway_bend.center |- pc_feats0.east) |- (target.center);
+
+  \coordinate (ref) at ($(flow.east) + (0.85,0)$);
+  \tensor[m=1,n=1,name=flows,d=\Nobjects,anchor=west,at=ref]
+  \draw[->,thick] (flow) -- ([xshift=-1mm]flows0.west);
+
+  \node[draw,rounded corners,thick,align=center] (sample) at ($(flows0.south) + (0,-1)$) {Sample};
+  \node[align=center] (object_idx) at ([yshift=-10mm]sample.south) {Next object\\in path};
+
+  \draw[->,thick] ([yshift=-1mm]flows0.south) -- (sample);
+  \draw[->,thick] (sample) -- (object_idx);
+  \draw[rounded corners,thick] (object_idx) -| ([xshift=6mm,yshift=+1mm]sample.east |- pc_feats0.north) coordinate (tmp) -- ([xshift=1mm]pc.center |- tmp);
+  \draw[->,thick,rounded corners] ([xshift=-1mm]pc.center |- tmp) -| (insert.north);
+
+  \draw[<-,thick] (sample) -- ++(-1,0) node[above,align=center,rotate=90] (key) {Random\\key};
+\end{tikzpicture}

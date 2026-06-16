@@ -1,0 +1,46 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{siunitx}
+% INCLUDE ../data/two-ray-power.txt relto ../main.tex
+\begin{tikzpicture}
+  \begin{axis}[
+      width=11.5cm,
+      height=6cm,
+      xmode=log,
+      xmin=1, xmax=100000,
+      ymin=-180, ymax=-50,
+      xlabel={Horizontal distance to transmitter (\unit{\meter})},
+      ylabel={Gain (\unit{\decibel})},
+      grid=major,
+      legend cell align={left},
+      legend pos=south west,
+      declare function={
+        fspl(\d) = 20*log10(299792458 / (2.4e9 * 4 * pi * \d));
+        tworay(\d) = 20*log10(10 * 1.5 / (\d * \d));
+      },
+    ]
+    \DeclareSIUnit{\decade}{decade}
+    \DeclareSIUnit[per-mode=symbol]{\dBdec}{\decibel\per\decade}
+
+    \draw[dashed,thick,gray] (axis cs:4.25e1,-180) -- (axis cs:4.25e1,-50) node[pos=.3,right,font=\footnotesize] {Brewster angle};
+
+    \addplot[thick, color=black] table[x=d, y=p_los, col sep=comma] {data/two-ray-power.txt};
+    \addlegendentry{$P_{\text{direct}}$}
+
+    \addplot[thick, dashed, color=blue] table[x=d, y=p_ref_par, col sep=comma] {data/two-ray-power.txt};
+    \addlegendentry{$P_{\text{reflection}, \parallel}$}
+
+    \addplot[thick, dotted, color=blue] table[x=d, y=p_tot_par, col sep=comma] {data/two-ray-power.txt};
+    \addlegendentry{$P_{\text{total}, \parallel}$}
+
+    \addplot[thick, dashed, color=red] table[x=d, y=p_ref_perp, col sep=comma] {data/two-ray-power.txt};
+    \addlegendentry{$P_{\text{reflection}, \perp}$}
+
+    \addplot[thick, dotted, color=red] table[x=d, y=p_tot_perp, col sep=comma] {data/two-ray-power.txt};
+    \addlegendentry{$P_{\text{total}, \perp}$}
+
+    \draw[|-|,thick] (axis cs:3e3, {fspl(3e3)+15}) -- (axis cs:4e4, {fspl(4e4)+15}) node[above,midway,sloped,font=\footnotesize] {\qty{-20}{\dBdec}};
+    \draw[|-|,thick] (axis cs:3e3, {tworay(3e3)-15}) -- (axis cs:4e4, {tworay(4e4)-15}) node[below,midway,sloped,font=\footnotesize] {\qty{-40}{\dBdec}};
+
+  \end{axis}
+\end{tikzpicture}

@@ -1,0 +1,122 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{intersections}
+% \providecommand{\adj}[1]{\bar{#1}}
+\begin{tikzpicture}
+  \pgfdeclarelayer{foreground}
+  \pgfsetlayers{main,foreground}
+  \def\rcRadius{1mm}
+  \def\rcShift{0.315*\rcRadius}
+  \tikzset{op/.style={draw, thick, fill=gray, fill opacity=0.5, text opacity=1, rounded corners=\rcRadius, minimum width=1.5em, minimum height=1.5em, inner sep=.2em}}
+  \tikzset{input/.style={font=\footnotesize}}
+  \tikzset{adj input/.style={input,blue}}
+  \tikzset{constant/.style={input}}
+  \tikzset{output/.style={input}}
+  \tikzset{adj output/.style={adj input}}
+  \tikzset{flow/.style={->,thick}}
+  \tikzset{adj flow/.style={<-,thick,blue,dotted,shorten <=0pt,shorten >=2pt}}
+  \tikzset{flow label/.style={above,midway,sloped,font=\scriptsize,fill=white,fill opacity=0.5,text opacity=1,rounded corners=\rcRadius,inner sep=0pt,outer sep=2.5pt}}
+  \tikzset{adj label/.style={flow label,below,text=blue}}
+
+  \node[op] (square) at (0,0) {$\cdot^2$};
+  \node[op,anchor=west,xshift=1.5cm] (exp) at (square.east) {$\exp(\cdot)$};
+  \node[op,anchor=north,yshift=-1cm] (cos) at (exp.south) {$\cos(\cdot)$};
+  \node[op,anchor=north,yshift=-.3cm] (sin) at (cos.south) {$\sin(\cdot)$};
+  \node[op,anchor=west,xshift=2.3cm] (mul1) at (exp.east) {$\times$};
+  \path (sin) -- (cos) coordinate[midway] (sin_cos_mid);
+
+  % N.B.: text opacity is 0.5 for zero adjoint values
+
+  \path (square.west) -- (-.7cm,0) coordinate (x);
+  \node[input,anchor=south east] at (x) {$x$};
+  \node[adj input,anchor=north east] (x_tmp) at (x) {
+    $
+    \begin{aligned}
+      \adj{x} &=  \frac{\partial f_1}{\partial x} \\
+      &=2x\adj{u}
+    \end{aligned}$
+  };
+
+  \coordinate (y) at (x |- sin_cos_mid);
+  \node[input,anchor=south east] at (y) {$y$};
+  \node[adj input,anchor=north east] (y_tmp) at (y) {};
+  \node[adj input,anchor=north west,inner ysep=0pt] at (x_tmp.west |- y_tmp) {
+    $
+    \begin{aligned}
+      \adj{y} &= \frac{\partial f_1}{\partial y} \\
+      &= -\adj{w}_1\sin(y) + \textcolor{blue!50}{\adj{w}_2\cos(y)}
+    \end{aligned}$
+  };
+
+  \node[op] (mul2) at (mul1 |- sin_cos_mid) {$\times$};
+
+  \node[op,anchor=west,xshift=2.4cm] (add1) at (mul1.east) {$+$};
+  \node[op] (add2) at (add1 |- mul2) {$+$};
+
+  \path (add1) -- (add2) node[midway,constant] (c) {$C$};
+
+  \path (add1.east) -- ++(0.3cm,0) coordinate (f1);
+  \node[output,anchor=south west] at (f1) {$z_1 + C$};
+  \node[adj output,anchor=north west] at (f1) {
+    $
+    \begin{aligned}
+      \adj{f}_1 &= \frac{\partial f_1}{\partial f_1} \\
+      &= 1
+    \end{aligned}$
+  };
+
+  \coordinate (f2) at (f1 |- add2);
+  \node[output,anchor=south west] at (f1 |- add2) {$z_2 + C$};
+  \node[adj output,anchor=north west,text opacity=.5] at (f1 |- add2) {
+    $
+    \begin{aligned}
+      \adj{f}_2 &= \frac{\partial f_1}{\partial f_2} \\
+      &= 0
+    \end{aligned}$
+  };
+
+  \draw[flow] (x) -- (square);
+  \draw[adj flow] (x) -- (square);
+  \draw[flow] (square) -- (exp) node[flow label] {$u=x^2$} node[adj label] {$\adj{u}=\adj{v}e^u$};
+  \draw[adj flow] (square) -- (exp);
+  \draw[flow] (exp) -- (mul1) node[flow label] {$v=e^{u}$} coordinate[midway] (exp_mul1_mid);
+  \draw[adj flow] (exp) -- (mul1);
+
+  \begin{pgfonlayer}{foreground}
+    \path (exp) -- (mul1) node[adj label,below] {$\adj{v}=\adj{z}_1 w_1 + \textcolor{blue!50}{\adj{z}_2 w_2}$};
+  \end{pgfonlayer}
+
+  \begin{pgfinterruptboundingbox}
+    \path [name path=VERT] (exp_mul1_mid) -- (exp_mul1_mid |- sin);
+    \path [name path=DIAG_1] (mul2.north west) -- ++(135:5cm);
+    \path [name intersections={of=VERT and DIAG_1,by=mid_1}];
+    \path [name path=HORI] (cos.east) -- (mul2 |- cos.east);
+    \path [name path=DIAG_2] (mul1.south west) -- ++(225:5cm);
+    \path [name intersections={of=HORI and DIAG_2,by=mid_2}];
+  \end{pgfinterruptboundingbox}
+
+  \draw[flow,rounded corners=\rcRadius] (exp_mul1_mid) -- (mid_1)  -- ([xshift=\rcShift, yshift=-\rcShift]mul2.north west);
+  \draw[adj flow,-,rounded corners=\rcRadius] (exp_mul1_mid) -- (mid_1)  -- ([xshift=\rcShift, yshift=-\rcShift]mul2.north west);
+
+  \draw[flow] (y) -- (cos);
+  \draw[adj flow] (y) -- (cos);
+  \draw[flow] (y) -- (sin);
+  \draw[adj flow] (y) -- (sin);
+
+  \draw[flow,rounded corners=\rcRadius] (cos.east) -- (mid_2) -- ([xshift=\rcShift, yshift=\rcShift]mul1.south west) node[flow label,pos=.45] {$w_1=\cos(y)$} node[adj label,pos=.45] {$\adj{w}_1=\adj{z}_1 v$};
+  \draw[adj flow,rounded corners=\rcRadius] (cos.east) -- (mid_2) -- ([xshift=\rcShift, yshift=\rcShift]mul1.south west);
+  \draw[flow] (sin.east) -- (mul2.west) node[flow label] {$w_2=\sin(y)$} node[adj label, text opacity=.5] {$\adj{w}_2=\adj{z}_2 v$};
+  \draw[adj flow,rounded corners=\rcRadius] (sin.east) -- (mul2.west);
+
+  \draw[flow] (mul1) -- (add1) node[flow label] {$z_1 = w_1 v$} node[adj label] {$\adj{z}_1 = \adj{f}_1$};
+  \draw[adj flow] (mul1) -- (add1);
+  \draw[flow] (mul2) -- (add2) node[flow label] {$z_2 = w_2 v$} node[adj label, text opacity=.5] {$\adj{z}_2 = \adj{f}_2$};
+  \draw[adj flow] (mul2) -- (add2);
+  \draw[flow] (c) -- (add1);
+  \draw[flow] (c) -- (add2);
+
+  \draw[flow] (add1) -- (f1);
+  \draw[adj flow] (add1) -- (f1);
+  \draw[flow] (add2) -- (f2);
+  \draw[adj flow] (add2) -- (f2);
+\end{tikzpicture}

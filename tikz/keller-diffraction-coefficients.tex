@@ -1,0 +1,34 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{pgfplotstable}
+% \usepackage{siunitx}
+% \pgfplotsset{compat=1.18}
+% \providecommand{\glsxtrshort}[1]{#1}
+% INCLUDE ../data/keller-coefficients-fig-4-10.txt relto ../main.tex
+\begin{tikzpicture}
+  \begin{axis}[
+      width=8cm,
+      %height=7cm,
+      xlabel={Observation angle $\phi^d$ (\unit{\degree})},
+      ylabel={$D_{\parallel}^k, D_{\perp}^k$ (\unit{\decibel})},
+      xmin=0, xmax=320,
+      ymin=-80, ymax=40,
+      xtick={0, 40, 80, 120, 160, 200, 240, 280, 320},
+      ytick={-80, -60, -40, -20, 0, 20, 40},
+      restrict y to domain=-100:100,
+    ]
+
+    \draw[thick,dashed,draw=gray,draw opacity=0.5] (axis cs:125,-80) -- (axis cs:125,40) node[sloped,pos=.2,align=center] {\glsxtrshort{rsb}\\[.5em]$\phi^d+\phi^i=\pi$};
+    \draw[thick,dashed,draw=gray,draw opacity=0.5] (axis cs:235,-80) -- (axis cs:235,40) node[sloped,pos=.2,align=center] {\glsxtrshort{isb}\\[.5em]$\phi^d-\phi^i=\pi$};
+
+    \node at (axis cs:62.5, 25) {Region I};
+    \node at (axis cs:180, 25) {Region II};
+    \node at (axis cs:278.5, 25) {Region III};
+
+    \addplot[solid, semithick] table[x=phi, y=Dh_dB, col sep=comma] {data/keller-coefficients-fig-4-10.txt};
+    \node[anchor=south] at (axis cs:50, -30) {$D_{\perp}^k$};
+
+    \addplot[dashed, semithick] table[x=phi, y=Ds_dB, col sep=comma] {data/keller-coefficients-fig-4-10.txt};
+    \node[anchor=north] at (axis cs:40, -48) {$D_{\parallel}^k$};
+  \end{axis}
+\end{tikzpicture}

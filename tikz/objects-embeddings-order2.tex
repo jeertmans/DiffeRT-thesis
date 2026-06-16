@@ -1,0 +1,56 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepgfplotslibrary{colorbrewer}
+% \pgfplotsset{compat=1.18}
+% \providecommand{\glsxtrshort}[1]{#1}
+% INCLUDE ../data/study-model-embeddings/objects_embeddings_basic_order2.txt relto ../main.tex
+% INCLUDE ../data/study-model-embeddings/objects_embeddings_swapped_order2.txt relto ../main.tex
+\begin{tikzpicture}
+
+  \begin{axis}[
+      name=leftplot,
+      title={Basic scene},
+      colormap/RdBu-11,
+      xlabel={Component index},
+      ylabel={Objects},
+      point meta min=-1.413115,
+      point meta max=1.413115,
+      width=4cm, height=3.0cm,
+      scale only axis,
+      ytick={5.50, 17.50, 29.50, 41.50, 53.50, 60.50},
+      yticklabels={{Building 1}, {Building 2}, {Building 3}, {Building 4}, {Building 5}, {Floor}},
+      yticklabel style={font=\footnotesize},
+      enlargelimits=false,
+    ]
+    \addplot [matrix plot, mesh/cols=128, point meta=explicit] table [x=col, y=row, meta=val] {data/study-model-embeddings/objects_embeddings_basic_order2.txt};
+    \draw [black, dashed, opacity=0.7] (axis cs:\pgfkeysvalueof{/pgfplots/xmin}, 11.5) -- (axis cs:\pgfkeysvalueof{/pgfplots/xmax}, 11.5);
+    \draw [black, dashed, opacity=0.7] (axis cs:\pgfkeysvalueof{/pgfplots/xmin}, 23.5) -- (axis cs:\pgfkeysvalueof{/pgfplots/xmax}, 23.5);
+    \draw [black, dashed, opacity=0.7] (axis cs:\pgfkeysvalueof{/pgfplots/xmin}, 35.5) -- (axis cs:\pgfkeysvalueof{/pgfplots/xmax}, 35.5);
+    \draw [black, dashed, opacity=0.7] (axis cs:\pgfkeysvalueof{/pgfplots/xmin}, 47.5) -- (axis cs:\pgfkeysvalueof{/pgfplots/xmax}, 47.5);
+    \draw [black, dashed, opacity=0.7] (axis cs:\pgfkeysvalueof{/pgfplots/xmin}, 59.5) -- (axis cs:\pgfkeysvalueof{/pgfplots/xmax}, 59.5);
+  \end{axis}
+
+  \begin{axis}[
+      name=rightplot,
+      at={(leftplot.outer east)},
+      anchor=outer west,
+      xshift=0.2cm,
+      title={\glsxtrshort{tx}--\glsxtrshort{rx} swapped},
+      colormap/RdBu-11,
+      xlabel={Component index},
+      colorbar,
+      point meta min=-1.413115,
+      point meta max=1.413115,
+      width=4cm, height=3.0cm,
+      scale only axis,
+      yticklabels=\empty,
+      enlargelimits=false,
+    ]
+    \addplot [matrix plot, mesh/cols=128, point meta=explicit] table [x=col, y=row, meta=val] {data/study-model-embeddings/objects_embeddings_swapped_order2.txt};
+    \draw [black, dashed, opacity=0.7] (axis cs:\pgfkeysvalueof{/pgfplots/xmin}, 11.5) -- (axis cs:\pgfkeysvalueof{/pgfplots/xmax}, 11.5);
+    \draw [black, dashed, opacity=0.7] (axis cs:\pgfkeysvalueof{/pgfplots/xmin}, 23.5) -- (axis cs:\pgfkeysvalueof{/pgfplots/xmax}, 23.5);
+    \draw [black, dashed, opacity=0.7] (axis cs:\pgfkeysvalueof{/pgfplots/xmin}, 35.5) -- (axis cs:\pgfkeysvalueof{/pgfplots/xmax}, 35.5);
+    \draw [black, dashed, opacity=0.7] (axis cs:\pgfkeysvalueof{/pgfplots/xmin}, 47.5) -- (axis cs:\pgfkeysvalueof{/pgfplots/xmax}, 47.5);
+    \draw [black, dashed, opacity=0.7] (axis cs:\pgfkeysvalueof{/pgfplots/xmin}, 59.5) -- (axis cs:\pgfkeysvalueof{/pgfplots/xmax}, 59.5);
+  \end{axis}
+\end{tikzpicture}

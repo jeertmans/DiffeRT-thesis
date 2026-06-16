@@ -1,0 +1,131 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{angles}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{patterns}
+% \usetikzlibrary{quotes}
+\begin{tikzpicture}[
+    scale=0.84,
+    % Define a style for the angle pics based on your request
+    myangle/.style={
+      draw,
+      angle radius=0.9cm,
+      angle eccentricity=1.3,
+    }
+  ]
+
+  % Parameters
+  \def\angI{30}    % Incident angle
+  \def\angT{20}    % Transmitted angle
+  \def\rayLen{5}   % Length of rays
+  \def\waveHalfLen{0.35cm} % FIXED half-length of wavefronts (total length = 0.7cm)
+
+  % Coordinates
+  \coordinate (O) at (0,0);
+
+  % Ray Endpoints
+  % Incident comes from bottom-left (180 + 30 = 210 degrees)
+  \coordinate (IncStart) at ({180+\angI}:\rayLen);
+  % Reflected goes to top-left (180 - 30 = 150 degrees)
+  \coordinate (RefEnd) at ({180-\angI}:\rayLen);
+  % Transmitted goes to top-right (20 degrees)
+  \coordinate (TransEnd) at (\angT:\rayLen);
+
+  % Normal reference points for defining angles
+  \coordinate (N_left) at (-4,0);
+  \coordinate (N_right) at (4,0);
+
+  % Mediums
+  \node[align=center] at (-2.5, 3.3) {Medium 1\\$\mu_1, \varepsilon_1$};
+
+  \node[align=center] at (2.5, 3.3) {Medium 2\\$\mu_2, \varepsilon_2$};
+
+  % Interface and Normal
+  % Hatching on the right side
+  \fill[pattern=north east lines] (0,-4) rectangle (0.3, 4);
+  \draw[thick] (0,-4) -- (0,4);
+
+  % Normal
+  \draw[dashed] (-5,0) -- (5,0) node[pos=.75,below=5pt] {Surface normal};
+
+  % Rays
+  % Incident
+  \draw[thick, ->] (IncStart) -- (O) node[pos=.65,align=center, below,sloped,font=\footnotesize] {Incident\\wave};
+
+  % Reflected
+  \draw[thick, ->] (O) -- (RefEnd) node[pos=.35,align=center, above,sloped,font=\footnotesize] {Reflected\\wave};
+
+  % Transmitted
+  \draw[thick, ->] (O) -- (TransEnd) node[pos=.35,align=center, above,sloped,font=\footnotesize] {Transmitted\\(refracted) wave};
+
+  % Wavefronts
+  % Using ($ (Position)!length!angle:(Target) $) syntax for fixed orthogonal length
+
+  % Incident Wavefronts
+  \foreach \t in {0.10, 0.13, 0.16} {
+    \coordinate (W) at ($(IncStart)!\t!(O)$);
+    \draw[dashed,thick,gray] ($(W)!\waveHalfLen!90:(O)$) -- ($(W)!\waveHalfLen!-90:(O)$);
+  }
+
+  % Reflected Wavefronts
+  \foreach \t in {0.64, 0.67, 0.70} {
+    \coordinate (W) at ($(O)!\t!(RefEnd)$);
+    \draw[dashed,thick,gray] ($(W)!\waveHalfLen!90:(RefEnd)$) -- ($(W)!\waveHalfLen!-90:(RefEnd)$);
+  }
+
+  % Transmitted Wavefronts
+  \foreach \t in {0.64, 0.67, 0.70} {
+    \coordinate (W) at ($(O)!\t!(TransEnd)$);
+    \draw[dashed,thick,gray] ($(W)!\waveHalfLen!90:(TransEnd)$) -- ($(W)!\waveHalfLen!-90:(TransEnd)$);
+  }
+
+  % Angles
+
+  % Incident Angle (between Incident Ray and Normal)
+  % Note: defined by points IncStart--O--N_left
+  \draw pic [|->,myangle, "$\theta_i$"] {angle = N_left--O--IncStart};
+
+  % Reflected Angle (between Normal and Reflected Ray)
+  % Note: defined by points N_left--O--RefEnd
+  \draw pic [<-|,myangle, "$\theta_r$"] {angle = RefEnd--O--N_left};
+
+  % Transmitted Angle (between Normal and Transmitted Ray)
+  % Note: defined by points TransEnd--O--N_right
+  % Adjusted radius slightly to avoid overlapping the wavefronts
+  \draw pic [->,myangle, "$\theta_t$", angle radius=1.1cm] {angle = N_right--O--TransEnd};
+
+  % Electric Field Vectors
+
+  % Incident E-field
+  \coordinate (EI_pos) at ($(IncStart)!0.00!(O)$);
+  % E_parallel (Arrow perp to ray)
+  \draw[->,thick,blue] (EI_pos) -- ($(EI_pos)!0.7cm!90:(O)$) node[above] {$E_\parallel^i$};
+  % E_perp (Circle with dot)
+  \draw[red,fill=white] (EI_pos) circle (6pt);
+  \fill[red] (EI_pos) circle (2pt);
+  \node[red,below=5pt] at (EI_pos) {$E_\perp^i$};
+
+  % Reflected E-field
+  \coordinate (ER_pos) at ($(O)!0.8!(RefEnd)$);
+  % E_parallel (Arrow perp to ray)
+  \draw[->,thick,blue] (ER_pos) -- ($(ER_pos)!0.7cm!+90:(RefEnd)$) node[left] {$E_\parallel^r$};
+  % E_perp
+  \draw[red,fill=white] (ER_pos) circle (6pt);
+  \fill[red] (ER_pos) circle (2pt);
+  \node[red,above=5pt] at (ER_pos) {$E_\perp^r$};
+
+  % Transmitted E-field
+  \coordinate (ET_pos) at ($(O)!0.8!(TransEnd)$);
+  % E_parallel
+  \draw[->,thick,blue] (ET_pos) -- ($(ET_pos)!0.7cm!90:(TransEnd)$) node[above] {$E_\parallel^t$};
+  % E_perp
+  \draw[red,fill=white] (ET_pos) circle (6pt);
+  \fill[red] (ET_pos) circle (2pt);
+  \node[red,below=8pt,xshift=3pt] at (ET_pos) {$E_\perp^t$};
+
+  % Legend
+  \begin{scope}[shift={(1.2, -3.5)}]
+    \draw[dashed,thick,draw=gray] (0,0.4) -- ++ ({2*\waveHalfLen},0) node[right] {Wavefronts};
+  \end{scope}
+
+\end{tikzpicture}

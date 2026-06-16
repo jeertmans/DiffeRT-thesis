@@ -1,0 +1,34 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{tikz-3dplot}
+% \usetikzlibrary{3d}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\hat{\mathbf{#1}}}
+\tdplotsetmaincoords{65}{45}
+\begin{tikzpicture}[tdplot_main_coords,yscale=.6]
+  \tikzset{point/.style={draw,cross out,thick,inner sep=2pt}}
+  \tikzset{wall-surface/.style={gray,fill opacity=.5,draw=black,draw opacity=0.5,thick,dashed}}
+  \coordinate (O) at (0,0,0);
+
+  % Coordinates
+  \coordinate (BS) at (-2,0,1);
+  \coordinate (UE) at (2,0,1);
+  \pgfmathsetmacro{\length}{5}
+  \coordinate (L) at (-{\length/2},-{\length/2},0);
+
+  % Wall Surface
+  \fill[wall-surface] (L) -- ([shift={(\length,0,0)}]L) -- ([shift={(\length,\length,0)}]L) -- ([shift={(0,\length,0)}]L) -- cycle;
+
+  \node[point,label=above:{Source}] (nBS) at (BS) {};
+  \node[point,label=above:{$\bsup{P}$}] (nUE) at (UE) {};
+
+  \draw[->,thick] (O) -- ++(0,0,1) node[above] {$\uvec{n}$};
+  \node[below] at (O) {$\bsup{x}_r$};
+  \draw[->,thick] (nBS) -- (O) node[midway,below,sloped,font=\footnotesize] {$\bsup{s}^i$};
+  \draw[->,thick] (O) -- (nUE) node[midway,below,sloped,font=\footnotesize] {$\bsup{s}^r$};
+
+  \draw[->,canvas is xz plane at y=0] (0,.5) arc (90:150:.5) node[above=.5em,font=\footnotesize] {$\theta_i$};
+  \draw[->,canvas is xz plane at y=0] (0,.5) arc (90:30:.5) node[above=.5em,font=\footnotesize] {$\theta_r$};
+
+\end{tikzpicture}

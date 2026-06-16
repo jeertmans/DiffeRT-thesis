@@ -1,0 +1,52 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{pgfplotstable}
+% \usepackage{siunitx}
+% INCLUDE ../data/fpt/auto_vs_impl_diff.txt relto ../main.tex
+\begin{tikzpicture}[every mark/.append style={opacity=0.7}]
+  \pgfplotscreateplotcyclelist{custom color cycle}{
+    blue,every mark/.append style={fill=blue,draw=blue},mark=triangle*\\
+    blue,densely dashed,every mark/.append style={solid,fill=blue,draw=blue},mark=triangle*\\
+    red,every mark/.append style={fill=red,draw=red},mark=*\\
+    red,densely dashed,every mark/.append style={solid,fill=red,draw=red},mark=*\\
+    orange,every mark/.append style={fill=orange,draw=orange},mark=square*\\
+    orange,densely dashed,every mark/.append style={solid,fill=orange,draw=orange},mark=square*\\
+    green,every mark/.append style={fill=green!80!black,draw=green!80!black},mark=diamond*\\
+    green,densely dashed,every mark/.append style={solid,fill=green!80!black,draw=green!80!black},mark=diamond*\\
+  }
+  \begin{axis}[
+      width=8.0cm,
+      height=5.8cm,
+      xlabel={Interaction order $K$},
+      ylabel={Execution time (\unit{\milli\second})},
+      xtick pos=left,
+      xmin=0, xmax=11,
+      ymin=1e-1,ymax=1e3,
+      xtick={1,2,3,4,5,6,7,8,9,10},
+      ymode=log,
+      legend style={at={(0.5,1.02)},anchor=south,name=leg,nodes={anchor=base}},
+      ymajorgrids=true,
+      cycle list name=custom color cycle,
+      legend columns=-1,legend style={column sep=0.5ex},
+      legend image post style={yshift=.5ex},
+      every legend to name picture/.style={
+        baseline={(leg.base)},
+      },
+    ]
+    \pgfplotstableread[col sep=comma]{data/fpt/auto_vs_impl_diff.txt}\mydata;
+    \addplot table [x=num_inter,y expr=\thisrow{impl-16-1-2} * 1000] {\mydata};
+    \addplot table [x=num_inter,y expr=\thisrow{ad-16-1-2} * 1000] {\mydata};
+    \addplot table [x=num_inter,y expr=\thisrow{impl-16-64-2} * 1000] {\mydata};
+    \addplot table [x=num_inter,y expr=\thisrow{ad-16-64-2} * 1000] {\mydata};
+    \addplot table [x=num_inter,y expr=\thisrow{impl-128-1-2} * 1000] {\mydata};
+    \addplot table [x=num_inter,y expr=\thisrow{ad-128-1-2} * 1000] {\mydata};
+    \addplot table [x=num_inter,y expr=\thisrow{impl-128-64-2} *
+    1000] {\mydata};
+    \addplot table [x=num_inter,y expr=\thisrow{ad-128-64-2} * 1000] {\mydata};
+    \addlegendimage{only marks,mark=triangle*,mark options={draw=blue,fill=blue,opacity=0.7}}
+    \addlegendimage{only marks,mark=*,mark options={draw=red,fill=red,opacity=0.7}}
+    \addlegendimage{only marks,mark=square*,mark options={draw=orange,fill=orange,opacity=0.7}}
+    \addlegendimage{only marks,mark=diamond*,mark options={draw=green!80!black,fill=green!80!black,opacity=0.7}}
+    \legend{,,,,,,,,(16,1),(16,64),(128,1),(128,64)}
+  \end{axis}
+\end{tikzpicture}

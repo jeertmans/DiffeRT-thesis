@@ -1,0 +1,56 @@
+% No specific requirements
+\begin{tikzpicture}[scale=1]
+  \node at (4, 7) [font=\large\bfseries, align=center] {Transform-Invariant Scene Encoding\\for Generative Path Sampling};
+
+  % Scene 1: Arbitrary configuration
+  \node at (1.5, 5.5) [font=\bfseries] {Scene 1 (Original)};
+
+  % Buildings in scene 1
+  \draw[fill=gray!40] (0.2, 2.5) rectangle (0.5, 4.5);
+  \draw[fill=gray!40] (2.3, 2.5) rectangle (2.6, 4);
+  \draw[fill=gray!40] (0.7, 1) rectangle (1.2, 2.5);
+
+  % Transmitter and Receiver
+  \node[draw, circle, fill=red!70] at (0.1, 2.2) {T};
+  \node[draw, circle, fill=blue!70] at (2.8, 2.2) {R};
+
+  % Arrow showing transformation
+  \draw[->, very thick, -triangle 45] (3.2, 3.5) -- (4.3, 3.5);
+  \node at (3.75, 3.8) [font=\small] {\textbf{Transform}};
+
+  % Scene 2: Transformed configuration
+  \node at (6.5, 5.5) [font=\bfseries] {Canonical Frame};
+
+  % Transmitter at origin
+  \node[draw, circle, fill=red!70] at (5, 2.5) {T};
+  \node at (4.7, 2) {$(0,0,0)$};
+
+  % Receiver along x-axis
+  \node[draw, circle, fill=blue!70] at (7.2, 2.5) {R};
+  \node at (7.2, 2) {$(d, 0, 0)$};
+
+  % Transformed buildings
+  \draw[fill=gray!40] (5.1, 3) rectangle (5.5, 4.2);
+  \draw[fill=gray!40] (6, 3) rectangle (6.4, 3.8);
+  \draw[fill=gray!40] (5.6, 2.2) rectangle (6.1, 3);
+
+  % Grid showing canonical frame
+  \draw[dashed, gray!50] (5, 1.5) -- (5, 4.8);
+  \draw[dashed, gray!50] (7.5, 1.5) -- (7.5, 4.8);
+  \draw[dashed, gray!50] (4.5, 2.5) -- (7.7, 2.5);
+
+  % Arrows showing the transformation steps
+  \node at (4, 1.2) [align=center, font=\small] {
+    \textbf{Transformation:}\\
+    1. Translate: $T \to (0, 0, 0)$\\
+    2. Scale: $d_{TX-RX} = 1$\\
+    3. Rotate: $R \to (1, 0, 0)$
+  };
+
+  % Benefits box
+  \draw[thick, rounded corners] (0.1, -0.5) rectangle (7.9, 0.4);
+  \node[align=center, font=\small] at (4, -0.05) {
+    \textbf{Result:} Scene representation is invariant to translation, rotation, and scaling.\\
+    Neural network learns universal path interaction patterns, generalizing to \textit{any} scene configuration.
+  };
+\end{tikzpicture}

@@ -1,0 +1,116 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{tikz-3dplot}
+% \usetikzlibrary{3d}
+% \usetikzlibrary{decorations.pathmorphing}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\hat{\mathbf{#1}}}
+\tdplotsetmaincoords{65}{25}
+
+\begin{tikzpicture}[tdplot_main_coords, scale=0.92, line join=round]
+
+  % --- Styles ---
+  \tikzset{wavy/.style={->, thick, opacity=.6,decorate, decoration={snake, amplitude=.4mm, segment length=2.5mm, post length=1.5mm}}}
+  \tikzset{wall-surface/.style={gray,fill opacity=.5,draw=black,draw opacity=0.5,thick,dashed}}
+  \tikzset{wall-mesh/.style={draw=black, draw opacity=0.3, thin, dashed}}
+  \tikzset{tube/.style={draw=black, draw opacity=0.75}}
+
+  % --- Constants ---
+  \def\R{3.5} % Radius of the hemisphere
+
+  % --- Coordinates ---
+  \coordinate (O) at (0,0,0);
+
+  % Surface limits
+  \coordinate (S1) at (-5, -4, 0);
+  \coordinate (S2) at (5, -4, 0);
+  \coordinate (S3) at (5, 5, 0);
+  \coordinate (S4) at (-5, 5, 0);
+
+  % --- Curved Specular Patch Parameters ---
+  \def\thmin{30}  % Top edge
+  \def\thmax{50}  % Bottom edge
+  \def\phimin{10} % Right edge (viewer's left)
+  \def\phimax{50} % Left edge (viewer's right)
+
+  % Corners of the curved specular patch
+  \coordinate (R1) at ({\R*sin(\thmax)*cos(\phimin)}, {\R*sin(\thmax)*sin(\phimin)}, {\R*cos(\thmax)});
+  \coordinate (R2) at ({\R*sin(\thmax)*cos(\phimax)}, {\R*sin(\thmax)*sin(\phimax)}, {\R*cos(\thmax)});
+  \coordinate (R3) at ({\R*sin(\thmin)*cos(\phimax)}, {\R*sin(\thmin)*sin(\phimax)}, {\R*cos(\thmin)});
+  \coordinate (R4) at ({\R*sin(\thmin)*cos(\phimin)}, {\R*sin(\thmin)*sin(\phimin)}, {\R*cos(\thmin)});
+  \coordinate (Rcenter) at ({\R*sin(40)*cos(30)}, {\R*sin(40)*sin(30)}, {\R*cos(40)});
+
+  % --- Rectangular dS Patch (Edges parallel to main surface) ---
+  \coordinate (dS1) at (0.35, -0.25, 0);
+  \coordinate (dS2) at (0.35, 0.35, 0);
+  \coordinate (dS3) at (-0.35, 0.35, 0);
+  \coordinate (dS4) at (-0.35, -0.25, 0);
+
+  % Transmitter (Tx) - Placed opposite to the specular patch phi=30 -> phi=210
+  \coordinate (Tx) at ({-6*sin(40)*cos(30)}, {-6*sin(40)*sin(30)}, {6*cos(40)});
+
+  % --- Drawing ---
+
+  % 2. Transmitted Power (Pp)
+  \draw[wavy] (0, 0, -0.2) -- (0, 0, -1.4) node[right] {$P^t$};
+  % 1. Wall Surface
+  \filldraw[wall-surface] (S1) -- (S2) -- (S3) -- (S4) -- cycle;
+
+  % 3. Scattering Hemisphere (Wireframe)
+  \draw[gray, thick, dashed] plot[domain=0:180, samples=40] ({\R*cos(\x)}, {\R*sin(\x)}, {0});
+  \draw[gray, thick] plot[domain=180:360, samples=40] ({\R*cos(\x)}, {\R*sin(\x)}, {0});
+  \foreach \ang in {0, 30, ..., 150} {
+    \draw[wall-mesh] plot[domain=0:180, samples=30] ({\R*cos(\x)*cos(\ang)}, {\R*cos(\x)*sin(\ang)}, {\R*sin(\x)});
+  }
+
+  % 4. Differential Surface (dS)
+  \filldraw[fill=white, draw=black, thick, fill opacity=0.5] (dS1) -- (dS2) -- (dS3) -- (dS4) -- cycle;
+  \node[below left, yshift=-0.2em] at (dS4) {$\mathrm{d}S$};
+
+  \draw[->,thick] (Tx) -- (O) node[pos=.6,below=0.1cm,sloped] {$\bsup{s}^i$};
+
+  % 5. Normal Vector
+  \draw[thick, ->] (O) -- (0,0,4.5) node[above] {$\uvec{n}$};
+
+  % 6. Incident Wave Pyramid (with intermediate d\Omega patch)
+  \draw[tube] (Tx) -- (dS1);
+  \draw[tube] (Tx) -- (dS2);
+  \draw[tube] (Tx) -- (dS3);
+  \draw[tube] (Tx) -- (dS4);
+
+  \node[above left] at (Tx) {Source};
+  \node[below left] at ($(Tx)!0.5!(dS3)$) {$\mathrm{d}\Omega$};
+
+  % 7. Specular Wave Pyramid Lines (Clean connections, no twist)
+  \draw[tube] (dS1) -- (R1);
+  \draw[tube] (dS2) -- (R2);
+  \draw[tube] (dS3) -- (R3);
+  \draw[tube] (dS4) -- (R4);
+
+  \draw[->,thick] (O) -- (Rcenter) node[pos=.6,below=0.1cm,sloped] {$\bsup{s}^r$};
+
+  % 8. The Curved Specular Patch
+  \filldraw[fill=white, draw=black, thick, fill opacity=0.5]
+  plot[domain=\phimin:\phimax, samples=15] ({\R*sin(\thmax)*cos(\x)}, {\R*sin(\thmax)*sin(\x)}, {\R*cos(\thmax)})
+  -- plot[domain=\thmax:\thmin, samples=15] ({\R*sin(\x)*cos(\phimax)}, {\R*sin(\x)*sin(\phimax)}, {\R*cos(\x)})
+  -- plot[domain=\phimax:\phimin, samples=15] ({\R*sin(\thmin)*cos(\x)}, {\R*sin(\thmin)*sin(\x)}, {\R*cos(\thmin)})
+  -- plot[domain=\thmin:\thmax, samples=15] ({\R*sin(\x)*cos(\phimin)}, {\R*sin(\x)*sin(\phimin)}, {\R*cos(\x)})
+  -- cycle;
+
+  % 9. Angles
+  \draw[thick, <-] plot[domain=0:40, samples=20] ({2*sin(\x)*cos(210)}, {2*sin(\x)*sin(210)}, {2*cos(\x)});
+  \node at (-0.6, -0.4, 2.2) {$\theta_i$};
+
+  \draw[thick, ->] plot[domain=0:40, samples=20] ({1.5*sin(\x)*cos(30)}, {1.5*sin(\x)*sin(30)}, {1.5*cos(\x)});
+  \node at (.1, 0.7, 1.5) {$\theta_r$};
+
+  % 10. Wavy Power Vectors
+  \draw[wavy] ([shift={(0,0,0.5)}]$(Tx)!0.1!(dS1)$) -- ([shift={(0,0,0.5)}]$(Tx)!0.4!(dS1)$) node[midway, above right] {$P^i$};
+  \draw[wavy] (Rcenter) -- ++(0.9, 0.5, 0.9) node[right] {$P^r$};
+  \draw[wavy] (2, -1.5, 0) -- (3.5, -1.5, 0) node[right] {$P^s$};
+
+  % 11. Text Callouts
+  \draw[<-, dashed, thick] (Rcenter) ++(-0.2, 0.5, 0.5) -- ++(0, 1.0, 1.0) node[above] {Specular wave};
+  \draw[<-, dashed, thick] (4.0, 0, 1.5) -- ++(1.5, 0, 1.5) node[above] {Scattered wave};
+
+\end{tikzpicture}

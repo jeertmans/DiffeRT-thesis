@@ -1,0 +1,43 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{siunitx}
+% \usepgfplotslibrary{groupplots}
+% INCLUDE ../data/antenna-pattern-optimization.txt relto ../main.tex
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={
+        group size=3 by 1,
+        horizontal sep=1.4cm,
+      },
+      width=4.2cm,
+      xlabel={Optimization step},
+      ylabel style={yshift=-4pt},
+      scaled x ticks=false,
+      xtick={0,5000,10000},
+      xticklabels={0,5k,10k},
+      grid=major,
+      ymajorgrids=true,
+      xmajorgrids=true,
+    ]
+    \nextgroupplot[
+      ylabel={Path gain (\unit{\decibel})},
+      title={\shortstack{Power\\convergence}},
+    ]
+    \addplot[thick, color=red,each nth point=100, filter discard warning=false, unbounded coords=discard]
+    table[x=step, y=power_db, col sep=comma] {data/antenna-pattern-optimization.txt};
+
+    \nextgroupplot[
+      ylabel={Angle (\unit{\degree})},
+      title={\shortstack{Pattern direction\\(zenith)}},
+    ]
+    \addplot[thick, color=blue,each nth point=100, filter discard warning=false, unbounded coords=discard]
+    table[x=step, y=theta_deg, col sep=comma] {data/antenna-pattern-optimization.txt};
+
+    \nextgroupplot[
+      ylabel={Angle (\unit{\degree})},
+      title={\shortstack{Pattern direction\\(azimuth)}},
+    ]
+    \addplot[thick, color=blue,each nth point=100, filter discard warning=false, unbounded coords=discard]
+    table[x=step, y=phi_deg, col sep=comma] {data/antenna-pattern-optimization.txt};
+  \end{groupplot}
+\end{tikzpicture}

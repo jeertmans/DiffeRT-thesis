@@ -1,0 +1,153 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{angles}
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{decorations.pathmorphing}
+% \usetikzlibrary{decorations.pathreplacing}
+% \usetikzlibrary{patterns}
+% \usetikzlibrary{quotes}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+\begin{tikzpicture}[
+    scale=0.64,
+    >=Latex,
+    myangle/.style={draw, angle radius=0.9cm, angle eccentricity=1.3},
+    wavefront/.style={dashed, thick, gray}
+  ]
+
+  % X-coordinates for boundaries
+  \def\bA{0}      % End Air 1 / Start Layer 1
+  \def\bB{1.5}    % End 1 / Start 2
+  \def\bC{3.0}    % End 2 / Start dots
+  \def\bD{4.5}    % End dots / Start n
+  \def\bE{7.0}    % End n / Start dots
+  \def\bF{8.5}    % End dots / Start N
+  \def\bG{10.0}   % End N / Start Air 2
+
+  % Center X-coordinates for text alignment
+  \def\cAirL{-1.5}
+  \def\cLone{0.75}
+  \def\cLtwo{2.25}
+  \def\cDotsA{3.75}
+  \def\cLn{5.75}
+  \def\cDotsB{7.75}
+  \def\cLN{9.25}
+  \def\cAirR{11.5}
+  \def\cTitle{-2.5}
+
+  % Y-coordinates for rows
+  \def\yDim{4.5}
+  \def\yLay{2.8}
+  \def\yPerm{1.5}
+  \def\yWid{0.2}
+
+  % ---------------------------------------------------
+  % 1. Background Hatching for Intermediate Slabs
+  % ---------------------------------------------------
+  \fill[pattern=north west lines, pattern color=gray!50] (\bA, -5.5) rectangle (\bB, \yLay+0.5);
+  \fill[pattern=crosshatch, pattern color=gray!40] (\bB, -5.5) rectangle (\bC, \yLay+0.5);
+  \fill[pattern=north east lines, pattern color=gray!50] (\bD, -5.5) rectangle (\bE, \yLay+0.5);
+  \fill[pattern=grid, pattern color=gray!40] (\bF, -5.5) rectangle (\bG, \yLay+0.5);
+
+  \pgfmathsetseed{2} % For reproducible randomness
+  \fill[white] (\bD, {\yWid - 0.5}) -- ++(0,1.0) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { -- (\bE, {\yWid + .5}) } -- ++(0,-1.0) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { -- cycle};
+
+  % Draw vertical boundaries
+  \foreach \x in {\bA, \bB, \bC, \bD, \bE, \bF, \bG} {
+    \draw[thick] (\x, -5.5) -- (\x, \yLay+0.5);
+  }
+
+  % Top Dimension Arrows (Air | Slab | Air)
+  \draw[thick] (\bA, \yDim-0.3) -- (\bA, \yDim+0.3);
+  \draw[thick] (\bG, \yDim-0.3) -- (\bG, \yDim+0.3);
+
+  \draw[<-, thick] (\bA, \yDim) -- (\cAirL, \yDim) node[left] {Air};
+  \draw[<->, thick] (\bA, \yDim) -- (\bG, \yDim) node[midway, fill=white, inner sep=2pt] {Slab};
+  \draw[->, thick] (\bG, \yDim) -- (\cAirR, \yDim) node[right] {Air};
+
+  % Data Rows (Added fill=white for legibility over patterns)
+  \pgfmathsetseed{3} % For reproducible randomness
+  % Row 1: Layers
+  \node[left] at (\cTitle, \yLay) {Layers:};
+  \node at (\cAirL, \yLay) {0};
+  \fill[white] (\cLone, \yLay) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (10pt) };
+  \node at (\cLone, \yLay) {1};
+  \fill[white] (\cLtwo, \yLay) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (10pt) };
+  \node at (\cLtwo, \yLay) {2};
+  \node at (\cDotsA, \yLay) {...};
+  \fill[white] (\cLn, \yLay) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (10pt) };
+  \node at (\cLn, \yLay) {$n$};
+  \node at (\cDotsB, \yLay) {...};
+  \fill[white] (\cLN, \yLay) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (10pt) };
+  \node at (\cLN, \yLay) {$N$};
+  \node at (\cAirR, \yLay) {$N+1$};
+
+  % Row 2: Permittivities
+  \pgfmathsetseed{3} % For reproducible randomness
+  \node at (\cAirL, \yPerm) {$\epsilon_{r,0}=1$};
+  \fill[white] (\cLone, \yPerm) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (12pt) };
+  \node at (\cLone, \yPerm) {$\epsilon_{r,1}$};
+  \fill[white] (\cLtwo, \yPerm) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (12pt) };
+  \node at (\cLtwo, \yPerm) {$\epsilon_{r,2}$};
+  \node at (\cDotsA, \yPerm) {...};
+  \fill[white] (\cLn, \yPerm) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (12pt) };
+  \node at (\cLn, \yPerm) {$\epsilon_{r,n}$};
+  \node at (\cDotsB, \yPerm) {...};
+  \fill[white] (\cLN, \yPerm) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (13pt) };
+  \node at (\cLN, \yPerm) {$\epsilon_{r,N}$};
+  \node at (\cAirR, \yPerm) {$\epsilon_{r,N+1}=1$};
+
+  % Row 3: Widths
+  \pgfmathsetseed{3} % For reproducible randomness
+  \node at (\cAirL, \yWid) {$d_0=0$};
+  \fill[white] (\cLone, \yWid) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (11pt) };
+  \node at (\cLone, \yWid) {$d_1$};
+  \fill[white] (\cLtwo, \yWid) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (11pt) };
+  \node at (\cLtwo, \yWid) {$d_2$};
+  \node at (\cDotsA, \yWid) {...};
+  \draw[<->, thick] (\bD, \yWid) -- (\bE, \yWid) node[midway, fill=white, inner sep=2pt] {$d_n$};
+  \node at (\cDotsB, \yWid) {...};
+  \fill[white] (\cLN, \yWid) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (11pt) };
+  \node at (\cLN, \yWid) {$d_N$};
+  \node at (\cAirR, \yWid) {$d_{N+1}=0$};
+
+  % ---------------------------------------------------
+  % Rays and Waves at the bottom
+  % ---------------------------------------------------
+  \def\rayY{-3.5}
+  \coordinate (Hit1) at (\bA, \rayY);
+  \coordinate (IncStart) at (-2.5, -5.5);
+  \coordinate (RefEnd) at (-2.5, -1.5);
+
+  % Left side rays (Incident & Reflected)
+  \draw[dashed] (-3.0, \rayY) -- (1.0, \rayY);
+  \coordinate (Norm1L) at (-2.0, \rayY);
+
+  \draw[thick, ->] (IncStart) -- (Hit1) node[midway,sloped, below] {$\bsup{s}^i$};
+  \draw[thick, ->] (Hit1) -- (RefEnd) node[midway,sloped, above] {$\bsup{s}^r$};
+
+  % Corrected Angle Paths
+  \draw pic [draw, <-, "$\theta_0$", myangle] {angle = Norm1L--Hit1--IncStart};
+  \draw pic [draw, ->, "$\theta_0$", myangle] {angle = RefEnd--Hit1--Norm1L};
+
+  % Middle side ray (Inside layer n)
+  \coordinate (HitN) at (\bD, -4.5);
+  \coordinate (RayN) at (\bE-0.2, -3.5);
+  \coordinate (NormNR) at (\bE, -4.5);
+
+  \draw[dashed] (\bD, -4.5) -- (\bE, -4.5);
+  \draw[thick, ->] (HitN) -- (RayN);
+  \draw pic [draw, ->, "$\theta_n$", anchor=west, angle radius=1.cm, angle eccentricity=1.05] {angle = NormNR--HitN--RayN};
+
+  % Right side ray (Transmitted)
+  \renewcommand{\rayY}{-2.5}
+  \coordinate (Hit2) at (\bG, \rayY);
+  \coordinate (TransEnd) at (\bG+2.5, -0.5);
+  \coordinate (Norm2R) at (\bG+3.0, \rayY);
+
+  \draw[dashed] (\bG-1.0, \rayY) -- (\bG+3.0, \rayY);
+  \draw[thick, ->] (Hit2) -- (TransEnd) node[midway, above,sloped] {$\bsup{s}^t$};
+
+  \draw pic [draw, ->, "$\theta_{N+1} = \theta_0$", angle radius=0.7cm, anchor=west, angle eccentricity=1.2] {angle = Norm2R--Hit2--TransEnd};
+
+\end{tikzpicture}

@@ -1,0 +1,44 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{patterns.meta}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\glsxtrshort}[1]{#1}
+% \providecommand{\Glsxtrlong}[1]{#1}
+\begin{tikzpicture}[
+    scale=0.8,
+    point/.style={draw, cross out, thick, inner sep=2pt, fill=white},
+    receiver/.style={point},
+    source/.style={point},
+    imagesource/.style={point,opacity=0.75},
+    pathline/.style={draw=green!80!black, dashed, thick, opacity=0.75},
+    pathline_dotted/.style={pathline, draw=black, dotted},
+    wall/.style={draw=red, thick},
+    ground/.style={fill,draw=none,minimum width=0.3,minimum height=0.6},
+  ]
+
+  % Coordinates
+  \coordinate (R) at (-2.5, -3);
+  \coordinate (S) at (2.5, -2);
+  \coordinate (IS) at (2.5, 2);
+
+  \coordinate (P) at (0.5, 0); % intersection
+
+  % Wall
+  \draw[ground,pattern={Lines[angle=-45]}] (-3, 0) rectangle (3,0.1);
+  \draw[wall] (-3, 0) -- (3, 0);
+
+  % Second wall
+  \draw[ground,pattern={Lines[angle=0]},,rotate around={-45:(-2,-1.5)}] (-2, -1.5) rectangle ++({1/cos(45)},-.1);
+  \draw[wall] (-2, -1.5) -- (-1, -2.5);
+
+  % Lines
+  \draw[pathline_dotted] (IS) -- (R);
+  \draw[pathline] (P) -- (S);
+  \draw[pathline] (R) -- (P);
+
+  % Points
+  \node[imagesource, label=above:{Image Source}] at (IS) {};
+  \node[source, label=below:{Source}] at (S) {};
+  \node[receiver, label=below:{Receiver}] at (R) {};
+
+\end{tikzpicture}

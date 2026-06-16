@@ -1,0 +1,45 @@
+% No specific requirements
+\begin{tikzpicture}
+  \def\cellwidth{1.2}
+  \def\cellheight{0.6}
+  \def\totalwidth{8*\cellwidth}
+  \def\topbarheight{0.8}
+  \def\verticaldrop{2}
+  \def\arrowhalflength{2}
+
+  \shadedraw[left color=black!30, right color=white] (0, \cellheight) rectangle (\totalwidth, \cellheight + \topbarheight) node[midway] (frequency) {\textbf{Frequency}};
+
+  \draw (-\cellwidth, 0) rectangle (0, \cellheight);
+  \node at (-0.5*\cellwidth, 0.5*\cellheight) {\textbf{Band}};
+
+  \foreach \band [count=\i from 0] in {vlf, lf, mf, hf, vhf, uhf, shf, ehf} {
+    \draw (\i*\cellwidth, 0) rectangle ++(\cellwidth, \cellheight);
+    \node at (\i*\cellwidth + 0.5*\cellwidth, 0.5*\cellheight) {\glsxtrshort{\band}};
+  }
+
+  \newcommand{\noprefix}{}
+  \foreach \freq / \freqmul / \wave / \wavemul [count=\i from 0] in {
+    3/\kilo/100/\kilo,
+    30/\kilo/10/\kilo,
+    300/\kilo/1/\kilo,
+    3/\mega/100/\noprefix,
+    30/\mega/10/\noprefix,
+    300/\mega/1/\noprefix,
+    3/\giga/10/\centi,
+    30/\giga/1/\centi,
+    300/\giga/1/\milli%
+  } {
+    \path (\i*\cellwidth, 0) -- ++(0, -\cellheight) coordinate (bot);
+    \path (bot) -- (\i*\cellwidth, -\verticaldrop) coordinate[pos=.2] (freqlabel) coordinate[pos=.8] (wavelengthlabel);
+    \node[anchor=south,font=\footnotesize] (freqnode) at (freqlabel) {\qty{\freq}{\freqmul\Hz}};
+    \node[anchor=south,font=\footnotesize] (wavelengthnode) at (wavelengthlabel) {\qty{\wave}{\wavemul\meter}};
+    \draw (\i*\cellwidth, 0) -- (freqnode) -- (wavelengthnode) -- (\i*\cellwidth, -\verticaldrop);
+  }
+
+  \shadedraw[left color=white, right color=black!30] (0, -\verticaldrop) rectangle (\totalwidth, -\verticaldrop - \topbarheight) node[midway] (wavelength) {\textbf{Free-space \gls{wavelength}}};
+  \draw[ultra thick] (wavelength.east) -- ++(+\arrowhalflength, 0) coordinate (startwavelengtharrow);
+  \draw[->,ultra thick] (wavelength.west) -- ++(-\arrowhalflength, 0) coordinate (endwavelengtharrow);
+
+  \draw[ultra thick] (frequency.west) -- (endwavelengtharrow |- frequency.west);
+  \draw[->,ultra thick] (frequency.east) -- (startwavelengtharrow |- frequency.west);
+\end{tikzpicture}

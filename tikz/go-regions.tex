@@ -1,0 +1,32 @@
+% Requires:
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{decorations.pathmorphing}
+% \usetikzlibrary{patterns}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\glsxtrshort}[1]{#1}
+\begin{tikzpicture}[scale=.6,font=\small]
+  \coordinate (tx) at (.5,1.5);
+  \coordinate (e1) at (-.5,0);
+  \coordinate (e2) at (2,0);
+  \coordinate (e3) at (1,-2);
+  \coordinate (isb) at (3.6,-1.6);
+  \coordinate (rsb) at (3.6,1.6);
+
+  \node[cross out,draw,inner sep=2pt,thick] at (tx) {};
+
+  \foreach \deg in {0,45,...,315} {
+    \draw[->,thick] (tx) ++(\deg:3mm) -- ++(\deg:7mm);
+  }
+
+  \pgfmathsetseed{4} % For reproducible randomness
+  \filldraw[thick,pattern=north west lines] (e1) -- (e2) -- (e3) decorate[rounded corners=1mm,decoration={random steps,segment length=2mm,amplitude=1mm}] { -- cycle };
+
+  \draw[thick,dashed,opacity=.25] (tx) -- (e2);
+  \draw[thick,dashed] (e2) -- (isb)node[pos=.55,align=center,text opacity=0.5,sloped,font=\footnotesize] {transition\\region} node[rotate=-45,sloped,right] {\glsxtrshort{isb}};
+  \draw[thick,dashed] (e2) -- (rsb) node[pos=.55,align=center,text opacity=0.5,sloped,font=\footnotesize] {transition\\region} node[rotate=+45,sloped,right] {\glsxtrshort{rsb}};
+
+  \node at (2,1.5) {I};
+  \node at (3.7,0) {II};
+  \node at (2.5,-2) {III};
+
+\end{tikzpicture}

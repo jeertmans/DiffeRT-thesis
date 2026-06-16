@@ -1,0 +1,24 @@
+% No specific requirements
+\begin{tikzpicture}[>=latex, scale=1.5]
+  % Surface
+  \draw[thick, fill=gray!20] (-2,0) -- (2,0) node[right] {Surface $\Sigma$};
+
+  % Normal
+  \draw[dashed] (0,0) -- (0,2) node[above] {$\hat{n}$};
+
+  % Incident Ray
+  \draw[->, thick, blue] (-1.5, 1.5) -- (0,0) node[midway, left] {$\hat{s}^i$};
+  \draw (-0.3, 0.3) arc (135:90:0.42);
+  \node at (-0.5, 0.6) {$\theta_i$};
+
+  % Reflected Ray
+  \draw[->, thick, red] (0,0) -- (1.5, 1.5) node[midway, right] {$\hat{s}^r$};
+  \draw (0, 0.5) arc (90:45:0.5);
+  \node at (0.5, 0.6) {$\theta_r$};
+
+  % Point Q_R
+  \filldraw (0,0) circle (1.5pt) node[below] {$Q_R$};
+
+  % Text
+  \node at (0, -0.5) {Plane of Incidence};
+\end{tikzpicture}

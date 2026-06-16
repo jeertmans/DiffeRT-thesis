@@ -1,0 +1,78 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{tikz-3dplot}
+% \usetikzlibrary{3d}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\hat{\mathbf{#1}}}
+\tdplotsetmaincoords{65}{45}
+\begin{tikzpicture}[tdplot_main_coords,yscale=.6]
+  \tikzset{point/.style={draw,cross out,thick,inner sep=2pt}}
+  \tikzset{wall-surface/.style={gray,fill opacity=.5,draw=black,draw opacity=0.5,thick,dashed}}
+  \tikzset{wall-mesh/.style={draw=black, draw opacity=0.3, thin, dashed}}
+  \coordinate (O) at (0,0,0);
+
+  % Coordinates
+  \coordinate (BS) at (-2,0,1);
+  \coordinate (UE) at (2,0,1);
+  \pgfmathsetmacro{\length}{5}
+  \pgfmathsetmacro{\dzx}{-0.35} % Curvature in x direction
+  \pgfmathsetmacro{\dzy}{-0.85} % Curvature in y direction
+  \pgfmathsetmacro{\dz}{\dzx + \dzy}
+
+  \coordinate (C1) at (-{\length/2}, -{\length/2}, \dz);
+  \coordinate (C2) at ({\length/2}, -{\length/2}, \dz);
+  \coordinate (C3) at ({\length/2}, {\length/2}, \dz);
+  \coordinate (C4) at (-{\length/2}, {\length/2}, \dz);
+
+  \draw[thick,dashed,gray,opacity=.5] (O) -- ++(0,0,-4.5) coordinate (origin);
+
+  % Wall Surface (Curved)
+  \fill[wall-surface]
+  (C1) .. controls (0,-{\length/2},{\dzy - \dzx}) ..  coordinate[midway] (a1c)
+  (C2) .. controls ({\length/2},0,{\dzx - \dzy}) .. coordinate[midway] (a2c)
+  (C3) .. controls (0,{\length/2},{\dzy - \dzx}) ..
+  (C4) .. controls (-{\length/2},0,{\dzx - \dzy}) .. cycle;
+
+  % Surface Mesh
+  \begin{scope}
+    \clip
+    (C1) .. controls (0,-{\length/2},{\dzy - \dzx}) ..
+    (C2) .. controls ({\length/2},0,{\dzx - \dzy}) ..
+    (C3) .. controls (0,{\length/2},{\dzy - \dzx}) ..
+    (C4) .. controls (-{\length/2},0,{\dzx - \dzy}) .. cycle;
+    \foreach \i in {-2,-1,0,1,2} {
+      \pgfmathsetmacro{\constval}{\i}
+      \pgfmathsetmacro{\sqval}{(\constval/(\length/2))^2}
+
+      % Fixed y grid lines (varies in x)
+      % z(x,y=c) = dzx * (x/(L/2))^2 + dzy * sqval
+      \pgfmathsetmacro{\zStartEnd}{\dzx + \dzy * \sqval}
+      \pgfmathsetmacro{\zCtrl}{-\dzx + \dzy * \sqval}
+      \draw[wall-mesh] (-{\length/2}, \constval, \zStartEnd) .. controls (0, \constval, \zCtrl) .. ({\length/2}, \constval, \zStartEnd);
+
+      % Fixed x grid lines (varies in y)
+      % z(x=c,y) = dzx * sqval + dzy * (y/(L/2))^2
+      \pgfmathsetmacro{\zStartEnd}{\dzx * \sqval + \dzy}
+      \pgfmathsetmacro{\zCtrl}{\dzx * \sqval - \dzy} % correct control for negative curvature in y
+      \draw[wall-mesh] (\constval, -{\length/2}, \zStartEnd) .. controls (\constval, 0, \zCtrl) .. (\constval, {\length/2}, \zStartEnd);
+    }
+  \end{scope}
+
+  \path (C1) -- (C2) coordinate[midway] (a1);
+  \draw[->,thick] (origin) -- (a1c) node[midway,sloped,below] {$a_1$};
+  \path (C2) -- (C3) coordinate[midway] (a2);
+  \draw[->,thick] (origin) -- (a2c) node[midway,sloped,below] {$a_2$};
+
+  \node[point,label=above:{Source}] (nBS) at (BS) {};
+  \node[point,label=above:{$\bsup{P}$}] (nUE) at (UE) {};
+
+  \draw[->,thick] (O) -- ++(0,0,1) node[above] {$\uvec{n}$};
+  \node[below] at (O) {$\bsup{x}_r$};
+  \draw[->,thick] (nBS) -- (O) node[midway,below,sloped,font=\footnotesize] {$\bsup{s}^i$};
+  \draw[->,thick] (O) -- (nUE) node[midway,below,sloped,font=\footnotesize] {$\bsup{s}^r$};
+
+  \draw[->,canvas is xz plane at y=0] (0,.5) arc (90:150:.5) node[above=.5em,font=\footnotesize] {$\theta_i$};
+  \draw[->,canvas is xz plane at y=0] (0,.5) arc (90:30:.5) node[above=.5em,font=\footnotesize] {$\theta_r$};
+
+\end{tikzpicture}

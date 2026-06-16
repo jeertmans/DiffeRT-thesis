@@ -1,0 +1,71 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{siunitx}
+% \usetikzlibrary{pgfplots.groupplots}
+% \providecommand{\Gls}[1]{#1}
+% INCLUDE ../data/mobility-principal-path-power.txt relto ../main.tex
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={
+        group size=1 by 3,
+        vertical sep=0cm,
+        xlabels at=edge bottom,
+        ylabels at=edge left,
+      },
+      width=7.0cm,
+      height=3.2cm,
+      grid=none,
+    ]
+
+    % Top plot: LOS range (-98 to -97 dB)
+    \nextgroupplot[
+      ymin=-100,
+      ymax=-97,
+      xtick=\empty,
+      xticklabels=\empty,
+      ytick={-98, -99},
+      axis x line*=middle,
+      legend columns=3,
+      legend style={draw=black,at={(0.5,1.20)}, anchor=south},
+      ticklabel style={/pgf/number format/fixed},
+    ]
+    \addlegendimage{thick, color=red, dashed}
+    \addlegendentry{LOS}
+    \addlegendimage{thick, color=red}
+    \addlegendentry{Reflection}
+    \addlegendimage{thick, color=orange}
+    \addlegendentry{Diffraction}
+    \addplot[thick, mark=none, color=red, dashed]
+    table[x=distance_m, y=power_los_db, col sep=comma] {data/mobility-principal-path-power.txt};
+
+    % Middle plot: Reflection range (-106.5 to -105.5 dB)
+    \nextgroupplot[
+      ymin=-105.78,
+      ymax=-105.63,
+      ytick={-105.75, -105.70},
+      yticklabels={$-105.75$, $-105.70$},
+      xtick=\empty,
+      xticklabels=\empty,
+      axis x line=none,
+      ylabel={Path gain (\unit{\decibel})},
+      ylabel style={yshift=+15pt},
+      ticklabel style={/pgf/number format/fixed},
+      axis y discontinuity=parallel,
+    ]
+    \addplot[thick, mark=none, color=red]
+    table[x=distance_m, y=power_refl_db, col sep=comma] {data/mobility-principal-path-power.txt};
+
+    % Bottom plot: Diffraction range (-125 to -123 dB)
+    \nextgroupplot[
+      ymin=-125.5,
+      ymax=-123,
+      ytick={-125, -124},
+      axis x line*=bottom,
+      xlabel={Displacement along $x$-direction (\unit{\meter})},
+      ticklabel style={/pgf/number format/fixed},
+      axis y discontinuity=parallel,
+    ]
+    \addplot[thick, mark=none, color=orange]
+    table[x=distance_m, y=power_diffr_db, col sep=comma] {data/mobility-principal-path-power.txt};
+  \end{groupplot}
+\end{tikzpicture}

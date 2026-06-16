@@ -1,0 +1,106 @@
+% Requires:
+% \usetikzlibrary{calc}
+\begin{tikzpicture}[
+    scale=0.78,transform shape,
+    block/.style={draw, fill=gray!20, rectangle, minimum width=1.6cm, minimum height=1.2cm, align=center, thick},
+    wave arrow/.style={->, thick, blue, shorten >=1pt, shorten <=1pt},
+    wavefront/.style={dashed,blue},
+    separator/.style={dashed},
+    structure/.style={draw, thick, line join=round, line cap=round},
+    ac symbol/.style={thick},
+    label text/.style={transform shape=false,align=center},
+  ]
+
+  % Region 1: Transmitter and Guided Waves
+
+  % Transmitter Block
+  \node[block] (transmitter) at (0,0) {};
+  % AC Symbol
+  \draw[ac symbol] (transmitter.center) circle (0.4cm);
+  \draw[thick] (transmitter.center) ++ (-0.2,0) sin ++(+.1, .1) cos ++(+.1, -.1) sin ++(+.1, -.1) cos ++(+.1, +.1);
+  \node[label text,below=0.15cm,inner sep=0pt] at (transmitter.south) {Transmitter};
+
+  % Guided Waveguide (Structure)
+  \draw[structure] (0.8, 0.4) -- (3, 0.4);
+  \draw[structure] (0.8, -0.4) -- (3, -0.4);
+
+  % Guided Waves (Arrows and Wavefronts)
+  \foreach \x in {1.2, 1.8, 2.4} {
+    \draw[wavefront] (\x, -0.4) -- (\x, 0.4);
+    \draw[wave arrow] (\x-0.2, 0) -- (\x+0.2, 0);
+  }
+  % The last wavefront at the boundary
+  \draw[wavefront] (3, -0.4) -- (3, 0.4);
+  \draw[wave arrow] (2.8, 0) -- (3.2, 0);
+
+  % Label for Guided Waves
+  \node[label text,below=2.3cm,anchor=north] at (1.9, -0.2) {Guided\\1D\\waves};
+
+  % Region 2:
+
+  % Antenna Horn (Structure)
+  \draw[structure] (3, 0.4) to[out=5, in=190] (6, 1.8);
+  \draw[structure] (3, -0.4) to[out=-5, in=-190] (6, -1.8);
+  % Antenna Aperture
+  \draw[structure] (6, 0) ellipse (0.3cm and 1.8cm);
+  % White fill to occlude the back of the aperture and the lines behind it
+  \begin{scope}
+    \clip (5.7, -1.9) rectangle (6, 1.9);
+    \fill[white] (6, 0) ellipse (0.3cm and 1.8cm);
+  \end{scope}
+  % Redraw the front arc of the aperture
+  \draw[structure] (6, -1.8) arc (270:90:0.3cm and 1.8cm);
+
+  % Transition Waves (Bulging Wavefronts and Fanning Arrows)
+  % Wavefront 1
+  \draw[wavefront] (3.6, -0.5) to[out=65, in=295] (3.6, 0.5);
+  \draw[wave arrow] (3.4, 0) -- (3.8, 0);
+
+  % Wavefront 2
+  \draw[wavefront] (4.4, -0.9) to[out=65, in=295] (4.4, 0.9);
+  \draw[wave arrow] (4.2, 0) -- (4.6, 0);
+  \draw[wave arrow] (4.2, 0.5) -- (4.6, 0.65);
+  \draw[wave arrow] (4.2, -0.5) -- (4.6, -0.65);
+
+  % Wavefront 3 (near aperture)
+  \draw[wavefront] (5.4, -1.4) to[out=65, in=295] (5.4, 1.4);
+  \draw[wave arrow] (5.1, 0) -- (5.6, 0);
+  \draw[wave arrow] (5.1, 0.8) -- (5.5, 1.1);
+  \draw[wave arrow] (5.1, -0.8) -- (5.5, -1.1);
+
+  % Label for Transition Region
+  \node[label text,below=2.3cm,anchor=north] at (4.5, -0.2) {Transition\\region\\(antenna)};
+
+  % Region 3: Free Space
+
+  % Center point for the free space arcs (virtual focal point)
+  \coordinate (Source) at (3,0);
+
+  % Free Space Waves (Concentric Arcs and Radial Arrows)
+  % Wavefront 1
+  \draw[wavefront] (Source) ++(30:4) arc (30:-30:4);
+  \draw[wave arrow] ($(Source)+(0:3.8)$) -- ++(0:0.5);
+  \draw[wave arrow] ($(Source)+(20:3.8)$) -- ++(20:0.5);
+  \draw[wave arrow] ($(Source)+(-20:3.8)$) -- ++(-20:0.5);
+
+  % Wavefront 2
+  \draw[wavefront] (Source) ++(30:5.2) arc (30:-30:5.2);
+  \draw[wave arrow] ($(Source)+(0:5.0)$) -- ++(0:0.5);
+  \draw[wave arrow] ($(Source)+(20:5.0)$) -- ++(20:0.5);
+  \draw[wave arrow] ($(Source)+(-20:5.0)$) -- ++(-20:0.5);
+
+  % Wavefront 3
+  \draw[wavefront] (Source) ++(30:6.4) arc (30:-30:6.4);
+  \draw[wave arrow] ($(Source)+(0:6.2)$) -- ++(0:0.5);
+  \draw[wave arrow] ($(Source)+(20:6.2)$) -- ++(20:0.5);
+  \draw[wave arrow] ($(Source)+(-20:6.2)$) -- ++(-20:0.5);
+
+  % Label for Free Space
+  \node[label text,below=2.3cm,anchor=north] at (8.0, -0.2) {Free space\\3D\\waves};
+
+  %--- Separators ---
+
+  \draw[separator] (3, -2.5) -- (3, 2.5);
+  \draw[separator] (6.3, -2.5) -- (6.3, 2.5); % Slightly after the antenna aperture
+
+\end{tikzpicture}

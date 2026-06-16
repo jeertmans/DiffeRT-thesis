@@ -1,0 +1,86 @@
+% Requires:
+% \usetikzlibrary{calc}
+% \usetikzlibrary{decorations.pathmorphing}
+% \usetikzlibrary{math}
+\begin{tikzpicture}[
+    rough surface/.style={
+      draw,
+      decorate,
+      decoration={random steps, segment length=4pt, amplitude=2.0pt}
+    },
+    rougher surface/.style={
+      draw,
+      decorate,
+      decoration={random steps, segment length=2pt, amplitude=1.5pt}
+    },
+    smooth surface/.style={draw, thick},
+    ray/.style={->, thick}
+  ]
+
+  % Define the Lobe Function Macro
+  % Usage: \Lobe{<angle variable>}{<rotation>}{<scale>}{<power>}
+  % We use max(0.0001, ...) to prevent log(0) errors which cause "Dimension too large"
+  \newcommand{\Lobe}[4]{#3 * pow(max(0.0001, cos(#1 - #2)), #4)}
+
+  % ==========================
+  % 1. Smooth Surface
+  % ==========================
+  \begin{scope}[xshift=0cm]
+    \draw[smooth surface] (-1.2,0) -- (1.2,0);
+
+    \coordinate (O) at (0,0);
+    \coordinate (Inc) at (130:1.5);
+    \coordinate (Ref) at (50:1.5);
+
+    \draw[ray] (Inc) -- (O);
+    \draw[ray] (O) -- ($(O)!0.75!(Ref)$);
+    \draw[dashed] (0,0) -- (0,1.2);
+    \draw[dotted, thick, draw opacity=0.5] (0,0) -- (Ref) node[pos=.8,sloped,below,align=center,font=\footnotesize] {Specular\\direction};
+
+    \draw (-0.4, 0.8) node[above] {$\theta_i$};
+    \draw (0, 0.6) arc (90:130:0.6);
+    \node at (0, -0.5) {Smooth};
+  \end{scope}
+
+  % ==========================
+  % 2. Rough Surface (Narrow Lobe)
+  % ==========================
+  \begin{scope}[xshift=3cm]
+    \pgfmathsetseed{4}
+    \draw[rough surface] (-1.2,0) -- (1.2,0);
+
+    \coordinate (O) at (0,0);
+    \coordinate (Inc) at (130:1.5);
+    \draw[ray] (Inc) -- (O);
+    \draw[dotted, thick, opacity=0.5] (0,0) -- (50:1.5);
+
+    % LOBE: Angle=50, Scale=1.5, Power=20 (Sharp)
+    \draw
+    plot[domain=0:180, samples=100, smooth]
+    (\x: {\Lobe{\x}{50}{1.5}{20}}) -- cycle;
+
+    \node at (0, -0.5) {Rough};
+  \end{scope}
+
+  % ==========================
+  % 3. Rougher Surface (Wide Lobe)
+  % ==========================
+  \begin{scope}[xshift=6cm]
+    \pgfmathsetseed{3}
+    \draw[rougher surface] (-1.2,0) -- (0,0);
+    \draw[rougher surface] (0,0) -- (1.2,0);
+
+    \coordinate (O) at (0,0);
+    \coordinate (Inc) at (130:1.5);
+    \draw[ray] (Inc) -- (O);
+    \draw[dotted, thick, opacity=0.5] (0,0) -- (50:1.5);
+
+    % LOBE: Angle=50, Scale=1.5, Power=4 (Wide)
+    \draw
+    plot[domain=0:180, samples=100, smooth]
+    (\x: {\Lobe{\x}{50}{1.5}{5.2}}) -- cycle;
+
+    \node at (0, -0.5) {Rougher};
+  \end{scope}
+
+\end{tikzpicture}

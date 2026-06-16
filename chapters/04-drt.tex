@@ -1,0 +1,565 @@
+\chapter{Differentiable Ray Tracing}\labch{drt}
+
+In the previous chapters, we established the physical and algorithmic foundations of forward ray tracing for radio propagation. In particular, \refch{path-tracing} formalized exact path recovery through the image method, Fermat-based optimization, and \gls{mpt}, while emphasizing the combinatorial growth of path candidates. These methods provide physically faithful forward maps from scene parameters to channel responses, but they are still most often used in a one-way \enquote{simulate-then-evaluate} workflow.
+
+With a purely forward workflow, the simulator is effectively treated as a \enquote{black box.} To quantify the effect of a small change in transmitter position, material properties, or reflector orientation, one typically reruns the entire simulation. In high-dimensional design spaces, this repeated evaluation rapidly becomes the main computational bottleneck.
+
+This chapter introduces \emph{differentiable ray tracing}, which augments exact forward solvers with derivative computation. The key point is structural: the same path-finding engines developed in \refch{path-tracing} define the primal computations on top of which reverse-mode derivatives are built. In this way, gradients remain tied to the underlying propagation physics rather than to a surrogate approximation.
+
+We first motivate inverse electromagnetic design and then present the main concepts of automatic differentiation. Next, we discuss the common constraints faced in practical implementation, and finally present methods for smoothing out geometric discontinuities in the optimization landscape.
+
+\section{The Paradigm Shift to Inverse Electromagnetic Design}
+
+The path tracing methods described in \refch{path-tracing} are primarily designed for forward simulation. However, many current challenges in wireless systems---especially in the context of 6G~\sidecite{Wang2020,Chowdhury2020}---are inverse problems. In practice, one seeks transmitter placements, antenna settings, or \gls{ris} configurations~\sidecite{DiRenzo2019,Wu2019} that satisfy coverage, capacity, and latency targets.
+
+This shift from forward simulation to inverse design has motivated recent work in differentiable ray tracing, notably for site-specific electromagnetic digital twins~\sidecite{Testolina2024}. Frameworks such as Sionna~RT~\sidecite{Hoydis2023} and DiffeRT~\sidecite{Eertmans2024JOSS,Eertmans2025ICMLCNDemo} illustrate that differentiability with respect to scene and transceiver parameters enables efficient gradient-based optimization and straightforward integration with machine learning pipelines.
+
+\subsection{Traditional Optimization Challenges}
+
+Classical wireless network optimization commonly relies on one of the following approaches:
+\begin{itemize}
+  \item \emph{Brute-force search} uses exhaustive evaluation of parameter combinations over a discretized grid.
+  \item \emph{Heuristic methods} rely on derivative-free algorithms such as genetic algorithms, simulated annealing, or particle swarm optimization.
+  \item \emph{Simplified analytical models} use empirical or statistical approximations that sacrifice site-specific physical accuracy for mathematical tractability.
+\end{itemize}
+
+While useful in many settings, these approaches face important limitations in large modern deployments:
+\begin{enumerate}
+  \item \emph{Computational inefficiency} occurs since grid searches scale exponentially with the dimensionality of the parameter space (the curse of dimensionality).
+  \item \emph{Suboptimal convergence} arises because heuristic methods often require thousands of forward evaluations and frequently become trapped in local optima without gradient guidance to point them toward the true minimum.
+  \item \emph{Model inaccuracy} remains because simplified analytical models inherently miss multipath effects, diffraction, and specific blockages that are critical for high-frequency (millimeter-wave and sub-terahertz) communications.
+\end{enumerate}
+
+To make this scaling issue explicit, let $F(\bsit{\theta})$ be a scalar objective and let $M=\dim(\bsit{\theta})$ denote the number of parameters:
+\begin{itemize}
+  \item A \emph{brute-force discretization} tests $c$ grid points per variable, with computational complexity $\mathcal{O}(c^M)$.
+  \item \emph{Finite differences} require $\mathcal{O}(M)$ evaluations of the forward problem for a single gradient step, i.e.,
+    \begin{wideequation}
+      \frac{\partial F}{\partial \theta_i} \approx \frac{F(\bsit{\theta}+\varepsilon\bsit{e}_i)-F(\bsit{\theta})}{\varepsilon},\quad \bsit{e}_i = \frac{\partial{\bsit{\theta}}}{\partial\theta_i},\quad i=1,\ldots,M,
+    \end{wideequation}
+    with overall cost $\mathcal{O}(M\cdot\text{cost}(F))$ per optimization iteration. Furthermore, this approach is highly sensitive to the choice of step size $\varepsilon$ and is inherently prone to numerical instability.
+  \item Other \emph{heuristics} typically require thousands to millions of objective evaluations to reach competitive solutions in non-convex multipath landscapes.
+\end{itemize}
+
+For large \gls{ris} designs, where $M$ can reach thousands, finite-difference gradients are therefore often prohibitive even before accounting for truncation and round-off errors.
+
+\subsection{The Differentiable Advantage}
+
+Differentiable ray tracing addresses these limitations through three main properties:
+\begin{itemize}
+  \item \emph{Gradient information} provides exact analytical derivatives rather than finite-difference approximations, enabling directed search in parameter space.
+  \item \emph{Physical accuracy} is preserved because optimization remains coupled to full-wave simulation or high-fidelity asymptotic models.
+  \item \emph{Scalability} follows from first-order optimization, which is essential when handling thousands of design variables, for example in \gls{ris} optimization~\sidecite[-4\baselineskip]{An2025} or surrogate-model training~\sidecite{Orekondy2023,Yang2024}.
+\end{itemize}
+
+The core mathematical idea is straightforward. Once the gradient $\nabla_{\bsit{\theta}}F$ is available, one can apply first-order optimization methods. The simplest case is gradient descent,
+\begin{equation}
+  \bsit{\theta}^{(i+1)} = \bsit{\theta}^{(i)} - \alpha \nabla_{\bsit{\theta}} F(\bsit{\theta}^{(i)}),
+\end{equation}
+where $\alpha$ is the learning rate. In practice, one often uses more advanced variants such as Adam~\sidecite{Kingma2015} or problem-specific first-order methods.
+
+For realistic ray tracing pipelines, manual derivation is generally impractical because the forward code is non-linear and includes substantial control flow. A systematic and automated method is therefore required to compute exact derivatives together with the primal evaluation. This is the role of \emph{automatic differentiation}.
+
+\section{Automatic Differentiation}
+
+\Gls{ad}~\sidecite[-9\baselineskip]{Griewank1989,Griewank2008} is the computational technique that makes differentiable ray tracing practical. In contrast to numerical differentiation (finite differences), which suffers from truncation and round-off errors, and symbolic differentiation, which can cause severe expression growth, \gls{ad} produces machine-precision derivatives with cost proportional to function evaluation. Modern frameworks such as PyTorch~\sidecite[-9\baselineskip]{PyTorch2024}, TensorFlow~\sidecite[-3\baselineskip]{TensorFlow2015}, and JAX~\sidecite{Jax2018} provide optimized \gls{ad} implementations and have made these methods accessible in large-scale learning and simulation pipelines.
+
+\subsection{Mathematical Foundation}
+
+At its core, \gls{ad} applies the chain rule to computer programs. Any programmatic function can be decomposed into a \gls{dag} of elementary operations (addition, multiplication, exponential, trigonometric functions, etc.).
+
+For a composite function $f(g(x))$, the chain rule states
+\begin{equation}
+  \frac{\mathrm{d}f}{\mathrm{d}x} = \frac{\mathrm{d}f}{\mathrm{d}g} \frac{\mathrm{d}g}{\mathrm{d}x}.
+\end{equation}
+
+For multiple variables, the multivariate chain rule gives
+\begin{equation}
+  \frac{\partial f}{\partial x_i} = \sum_j \frac{\partial f}{\partial y_j} \frac{\partial y_j}{\partial x_i},
+\end{equation}
+where $y_j$ are intermediate variables in the computational graph. \Gls{ad} computes these derivatives by traversing the graph either forward or backward.
+
+For a function $\bsit{f}:\mathbb{R}^{M}\rightarrow\mathbb{R}^{Q}$, let
+\begin{equation}
+  \bsit{J}_{\bsit{f}}(\bsit{x}) = \frac{\partial \bsit{f}}{\partial \bsit{x}} \in \mathbb{R}^{Q\times M},
+\end{equation}
+denote the Jacobian. Forward mode computes \glspl{jvp}, whereas reverse mode computes \glspl{vjp}. In radio optimization, one often has $Q=1$ (for example, received power) and large $M$, which strongly favors reverse mode, as detailed below.
+
+In the notation used throughout this chapter, $M$ is the number of inputs, $N$ is the total number of variables in the computational graph, and the variables $v_{M+1},\ldots,v_N$ are the intermediate states and outputs produced after the inputs have been initialized.
+
+\subsection{Forward Mode}
+
+Forward mode \gls{ad} propagates derivative information from inputs to outputs. It answers the question: how does a perturbation of one input affect all outputs?
+
+\subsubsection{Dual Numbers}
+
+Forward mode is naturally implemented with dual numbers, which extend real numbers with an infinitesimal part,
+\begin{equation}
+  x + \epsilon \dual{x},
+\end{equation}
+where $\epsilon^2 = 0$ by definition, and $\dual{x} = \frac{\partial x}{\partial x_{in}}$ represents the derivative of $x$ with respect to a chosen input variable $x_{in}$.
+
+Arithmetic on dual numbers propagates derivatives together with primal values, following the chain rule. For example, for addition and multiplication, we have
+\begin{align}
+  (a + \epsilon \dual{a}) + (b + \epsilon \dual{b}) &= (a + b) + \epsilon(\dual{a} + \dual{b}), \\
+  (a + \epsilon \dual{a}) \times (b + \epsilon \dual{b}) &= ab + \epsilon(a\dual{b} + \dual{a}b).
+\end{align}
+
+\subsubsection{Forward Mode Algorithm}
+
+Consider a function $\bsit{f}: \mathbb{R}^M \rightarrow \mathbb{R}^Q$ evaluated as a sequence of $N$ variables. The first $M$ variables are inputs $x_i$, and the subsequent variables $v_{M+1}$ to $v_N$ are obtained through elementary operations $\phi_j$. The final $Q$ variables correspond to the outputs.
+
+Let $k_j$ be the number of arguments of operation $\phi_j$, and let $p_l(j)$ denote the index of its $l$-th argument. Forward mode computes primal values $v$ and directional derivatives (tangents) $\dual{v}$, as summarized in \Cref{alg:forward-mode}.
+
+\begin{algorithm}
+  \caption{Forward mode \gls{ad}.}
+  \label{alg:forward-mode}
+  \DontPrintSemicolon
+  \KwIn{Input variables $v_i \eqdef x_i$ for $i=1,\ldots,M$.}
+  \KwOut{Output variables and their derivatives with respect to the target input variable.}
+  \emph{Initialize tangents:} For $i = 1, \ldots, M$, set $\dual{v}_i = 1$ for the target input variable, and $0$ for all others.\;
+  \For(\tcp*[f]{Evaluate intermediate and output variables}){$j = M+1, \ldots, N$}{
+    $v_j = \phi_j(v_{p_1(j)}, \ldots, v_{p_{k_j}(j)})$\tcp*[f]{Primals}\;
+    $\dual{v}_j = \sum_{l=1}^{k_j} \frac{\partial \phi_j}{\partial v_{p_l(j)}} \dual{v}_{p_l(j)}$ \tcp*[f]{Tangents}\;
+  }
+  \KwRet $(v_{N-Q+1}, \ldots, v_N)$, $(\dual{v}_{N-Q+1}, \ldots, \dual{v}_N)$\;
+\end{algorithm}
+
+\subsubsection{Forward Mode Example}
+
+Let us now consider the following two-output, two-input function
+\begin{equation}\label{eq:ad-example-function}
+  \bsit{f}(x,y) =
+  \begin{bmatrix}f_{1}(x,y)\\ f_{2}(x,y)
+  \end{bmatrix} =
+  \begin{bmatrix} \cos(y) e^{x^2} + C\\ \sin(y) e^{x^2} + C
+  \end{bmatrix}.
+\end{equation}
+
+\begin{figure*}
+  \centering
+  \inputtikz{ad-forward-mode}
+  \caption{Example of forward mode automatic differentiation applied to \eqref{eq:ad-example-function}. The derivative tracks the chain rule from left to right. Since we differentiate with respect to $x$, we initialize $\dual{x} = 1$ and $\dual{y} = 0$. Paths originating exclusively from $y$ act as \enquote{symbolic zeros} (represented by faded red text), preventing unnecessary computation downstream.}
+  \labfig{ad-forward-mode}
+\end{figure*}
+
+\reffig{ad-forward-mode} illustrates this procedure when differentiating with respect to $x$. The tangents are initialized as $\dual{x}=1$ and $\dual{y}=0$. Computation then proceeds from left to right, following the chain rule exactly. For example, for the intermediate variable $u=x^2$, we obtain $\dual{u}=2x\dual{x}$. Because $\dual{y}=0$, every derivative path that depends only on $y$ vanishes (e.g., $\dual{w}_1=-\dual{y}\sin(y)=0$).
+
+\subsubsection{Computational Complexity}
+
+To recover the full gradient of a scalar objective, forward mode has complexity $\mathcal{O}(M\cdot\text{cost}(f))$, because one \gls{jvp} pass provides derivatives for one seed direction at a time. It is therefore efficient for Jacobian columns when $M$ is small, but costly in high-dimensional inverse design.
+
+\subsection{Reverse Mode}
+
+Reverse mode \gls{ad} (widely known as backpropagation~\sidecite{Rumelhart1986}) propagates derivative information from outputs to inputs. Its objective is to answer the following question: how do all inputs influence one selected output?
+
+\subsubsection{The Adjoint Method}
+
+Reverse mode computes \enquote{adjoints.} For any intermediate variable $v_j$, its adjoint is the sensitivity of a selected scalar output $f$ with respect to that variable,
+\begin{equation}
+  \adj{v}_j = \frac{\partial f}{\partial v_j}.
+\end{equation}
+
+Applying the chain rule from outputs to inputs yields the reverse mode recurrence
+\begin{equation}
+  \adj{v}_i = \sum_{j\,\in\,\text{children}(i)} \adj{v}_j \frac{\partial v_j}{\partial v_i}.
+\end{equation}
+
+\subsubsection{Reverse Mode Algorithm}
+
+In reverse mode, we compute adjoints $\adj{v}_i=\tfrac{\partial y}{\partial v_i}$, representing the sensitivity of a chosen scalar output $y$ to each intermediate variable $v_i$. Because local partial derivatives $\tfrac{\partial v_j}{\partial v_i}$ depend on primal intermediates, reverse mode uses two passes: a forward pass that records intermediates (the \enquote{tape}), followed by a backward pass.
+
+Let $\text{args}(j)$ denote the set of indices $i$ of variables $v_i$ used directly to compute $v_j$. The reverse pass then yields the gradient of the scalar output with respect to all inputs, as shown in \Cref{alg:reverse-mode}.
+
+If the objective has several outputs, the same machinery can be applied one output at a time, or with a cotangent vector (representing output sensitivities) to compute a general vector--Jacobian product. In practice, this is the standard way to handle multi-output models in reverse mode without explicitly forming the full Jacobian matrix.
+
+\begin{algorithm}
+  \caption{Reverse mode \gls{ad}.}
+  \label{alg:reverse-mode}
+  \DontPrintSemicolon
+  \KwIn{Input variables $x_i$ for $i=1,\ldots,M$.}
+  \KwOut{Gradient with respect to all $M$ inputs.}
+  \emph{Forward pass:} Evaluate $\bsit{f}$ from inputs to outputs (for $j = M+1, \ldots, N$), storing intermediate values $v_j$ in memory (the \enquote{tape}).\;
+  \emph{Initialize adjoints:} Set $\adj{v}_j = 0$ for all variables $j = 1, \ldots, N$. Then, set $\adj{v}_k = 1$ for the target scalar output variable $v_k$.\;
+  \For(\tcp*[f]{Backward Pass}){$j = N, N-1, \ldots, M+1$}{
+    \For(\tcp*[f]{For each argument $v_i$ of operation $j$}){$i \in \text{args}(j)$}{
+      $\adj{v}_i \mathrel{+}= \adj{v}_j \frac{\partial v_j}{\partial v_i}$\tcp*[f]{Accumulate adjoints}\;
+    }
+  }
+  \KwRet $(\adj{v}_1, \ldots, \adj{v}_M)$
+\end{algorithm}
+
+\subsubsection{Reverse Mode Example}
+
+\begin{figure*}
+  \centering
+  \inputtikz{ad-reverse-mode}
+  \caption{Example of reverse mode automatic differentiation applied to \eqref{eq:ad-example-function}. Computation flows from right to left. By setting $\adj{f}_1 = 1$ and $\adj{f}_2 = 0$, the $\adj{z}_2$ branch becomes a \enquote{symbolic zero} (faded blue text), saving compute cycles on unrelated outputs.}
+  \labfig{ad-reverse-mode}
+\end{figure*}
+
+\reffig{ad-reverse-mode} shows reverse mode on the same example, computing the gradient of $f_1$ with respect to both $x$ and $y$. Initialization sets $\adj{f}_1=1$ for the target output and $\adj{f}_2=0$ for the non-target output (faded blue text).
+
+Computation proceeds from right to left. At the multiplication node $z_1=w_1v$, we obtain $\adj{w}_1=\adj{z}_1v$ and $\adj{v}=\adj{z}_1w_1$. Since node $v$ is shared by $z_1$ and $z_2$, its total adjoint is the sum of both contributions: $\adj{v}=\adj{z}_1w_1+\adj{z}_2w_2$. Because $\adj{f}_2=0$, the $\adj{z}_2$ branch contributes nothing.
+
+\subsubsection{Computational Complexity and Memory Trade-offs}
+
+Reverse mode has complexity $\mathcal{O}(Q\cdot\text{cost}(f))$ for Jacobian rows. In the common case $Q=1$, one backward pass yields the full gradient over all $M$ inputs through a \gls{vjp}. This is the main reason reverse mode is preferred for high-dimensional radio-network optimization.
+
+This computational advantage comes with a memory cost, because reverse mode stores forward intermediates on a tape. If a traced program has depth $D$ and per-step state size $S$, tape memory scales as
+\begin{equation}
+  \mathcal{M}_{\text{tape}} = \mathcal{O}(D\,S).
+\end{equation}
+In differentiable ray tracing, $D$ increases with interaction depth, number of candidate paths, and solver iterations. As a result, memory often becomes the primary bottleneck rather than arithmetic throughput. This directly motivates the checkpointing and rematerialization strategies discussed in \refch{efficient-path-tracing}.
+
+\subsection{On \enquote{Differentiable} vs \enquote{Fully Differentiable}}
+
+It is useful to distinguish \emph{mechanical differentiability} from \emph{optimization-useful differentiability}. If an implementation uses \gls{ad}-supported primitives, frameworks can usually execute a backward pass without runtime errors. This mechanical property alone does not guarantee informative gradients.
+
+Ray tracing includes discrete predicates (visibility, intersection validity, finite object extent) that behave as multidimensional step functions. For instance, triangle intersection tests rely on inequalities over barycentric coordinates. These predicates induce piecewise-constant regions where received power does not change under small perturbations, so gradients vanish almost everywhere away from boundaries. Consequently, a mechanically differentiable program can remain ineffective for gradient-based optimization unless discontinuities are regularized. This issue is discussed in \refsec{drt-discontinuities}.
+
+\section{Building a Differentiable Ray Tracing Pipeline}
+
+In modern machine learning stacks, building a differentiable ray tracing pipeline from scratch is often straightforward. With Python, operator overloading, and mature \gls{ad} systems, many derivatives are obtained automatically once the forward model is expressed with differentiable primitives.
+
+The main challenge is therefore not merely to make code differentiable, but to obtain gradients that are numerically stable, physically meaningful, and computationally efficient at scale. In practice, this shifts attention to implementation constraints that strongly influence architecture choices.
+
+\subsection{New Code vs Legacy Tools}\labsec{new-code-vs-legacy}
+
+For a new codebase, differentiability can be introduced from the beginning: scene parameters are represented as tensors, geometric operations are written with \gls{ad}-compatible operators, and gradients are obtained through \glspl{jvp} or \glspl{vjp} with little manual intervention. \Cref{listing:jax-ad-def,listing:jax-ad-grad,listing:jax-ad-jac} illustrate this on a simple JAX example for both gradient and Jacobian evaluation.
+
+\begin{listing}
+  \caption{Various ways to differentiate the example function \eqref{eq:ad-example-function} with JAX: function definition. The $x$ and $y$ inputs are represented as a single JAX array, as JAX supports differentiating with respect to array arguments, and the function itself is defined using JAX primitives whose syntax is similar to standard NumPy operations.}
+  \lablisting{jax-ad-def}
+  \inputminted[firstline=7,lastline=24]{python}{codes/jax-ad.py}
+\end{listing}
+
+\begin{listing}
+  \caption{Various ways to differentiate the example function \eqref{eq:ad-example-function} with JAX: the \texttt{jax.grad} function computes the gradient of a scalar output with respect to all inputs.}
+  \lablisting{jax-ad-grad}
+  \inputminted[firstline=26,lastline=32]{python}{codes/jax-ad.py}
+\end{listing}
+
+\begin{listing}
+  \caption{Various ways to differentiate the example function \eqref{eq:ad-example-function} with JAX: the \texttt{jax.jacobian} function computes the full Jacobian matrix.}
+  \lablisting{jax-ad-jac}
+  \inputminted[firstline=34,lastline=39]{python}{codes/jax-ad.py}
+\end{listing}
+
+Retrofitting an existing ray tracing program is usually harder and can be undesirable from a performance perspective. Legacy engines often combine heterogeneous components (e.g., C/C++ kernels, custom acceleration structures, external solvers, or MATLAB post-processing) that are opaque to \gls{ad}. Wrapping these components restores forward execution, but not necessarily gradients; correct derivatives then require custom backward rules and careful validation, with additional maintenance and runtime overhead.
+
+This is why recent differentiable ray tracing frameworks often re-implement key kernels in \gls{ad}-first environments rather than differentiating a pre-existing production simulator end-to-end.
+
+\subsection{Framework-Level Constraints for Differentiable Implementations}
+
+Even in newly designed implementations, framework constraints determine what is practical. Each \gls{ad} framework has its own tracing rules, supported primitives, and performance trade-offs. Understanding these rules helps avoid runtime errors, slow gradients, and excessive memory usage.
+
+JAX is a representative example. Its syntax is NumPy-like, but it imposes stricter constraints on shapes and control flow than many users initially expect. These constraints are especially important in reverse-mode \gls{ad}, because the backward pass requires access to forward intermediates.
+
+Conceptually, JAX first \emph{traces} a function to build a symbolic computational graph (a JAX expression). This is the program-level counterpart of \reffig{ad-reverse-mode}: build the forward graph first, then traverse it backward to propagate adjoints. After tracing, JAX may send the graph to the \gls{xla} compiler to optimize and generate kernels for \glspl{cpu}, \glspl{gpu}, or \glspl{tpu}. Although optional, this compilation step is often essential for performance and therefore imposes additional structure on code and control flow.
+
+The first issue concerns loops. With regular Python \texttt{for} or \texttt{while} loops inside compiled code, JAX may unroll iterations when bounds are static, increasing graph size and compilation time. In reverse mode, this also increases memory pressure because many per-iteration intermediates are required by the backward pass.
+
+For iterative operations, such as recursion in the image method, a better formulation is a carry update, e.g.,
+\begin{equation}
+  f(i,\text{carry})\rightarrow\text{carry}',
+\end{equation}
+implemented with \texttt{jax.lax.fori\_loop} or \texttt{jax.lax.scan} (see \reflisting{jax-control-flow-for-loop}). These primitives keep control flow inside the traced graph, reduce Python overhead, and generally improve scaling in reverse mode because the computation structure is explicit.
+
+\begin{marginlisting}
+  \caption{JAX's alternative to the Python \texttt{for} loop.}
+  \lablisting{jax-control-flow-for-loop}
+  \inputminted[firstline=31,lastline=44]{python}{codes/margin/jax-control-flow.py}
+\end{marginlisting}
+
+\begin{marginlisting}
+  \caption{JAX's alternative to the Python \texttt{if} statement.}
+  \lablisting{jax-control-flow-if-statement}
+  \inputminted[firstline=13,lastline=24]{python}{codes/margin/jax-control-flow.py}
+\end{marginlisting}
+
+The second issue concerns branching. If the predicate is independent of traced variables, a Python \texttt{if} is usually valid because only one branch matters at trace time. If the predicate depends on traced variables, branch selection must be implemented using \texttt{jax.lax.cond} (see \reflisting{jax-control-flow-if-statement}). A common alternative is \texttt{jnp.where}, but it evaluates both branches elementwise, which can propagate invalid values (e.g., NaNs) into reverse-mode derivatives even when one branch is logically inactive.
+
+Moreover, \texttt{jax.lax.while\_loop} has an important limitation: in general, it is not reverse-mode differentiable because \gls{xla} requires static memory bounds, which conflict with potentially unbounded dynamic loops. When reverse-mode gradients are needed, bounded formulations based on \texttt{fori\_loop} or \texttt{scan} are typically preferred.
+
+Finally, JAX's compilation model imposes static-shape requirements, which can be challenging in ray tracing where the number of candidate paths and interactions varies dynamically. A common remedy is to use fixed-size tensors with activity masks, preserving static shapes while representing variable activity. Another option is to exclude dynamic parts from compilation and compile only selected subroutines, but this can degrade performance and increase memory use because fewer global optimizations are available.
+
+\subsection{Non-Differentiable Operations and Custom Gradients}
+
+Not every operation in a ray tracing pipeline is differentiable by default. Typical examples include discrete visibility predicates, indexing-heavy lookup tables, hard pruning decisions, and external kernels that appear as black-box calls to the \gls{ad} engine. To bridge this gap, hybrid simulation pipelines can be used. For instance, a \enquote{semi-differentiable} ray tracing simulation with point clouds was proposed by Vaara \etal~\sidecite{Vaara2026}, who combined differentiable ray tracing software (Sionna~RT~\sidecite{Hoydis2023}) for computing electromagnetic fields with a non-differentiable engine (NimbusRT~\sidecite{Vaara2025}) to trace the paths. In this setup, gradients with respect to object positions are unavailable because the ray paths are obtained from the non-differentiable solver.
+
+When such operations are unavoidable, one must either (i) treat them as non-differentiable and stop gradients, or (ii) provide explicit custom derivative rules (e.g., custom \gls{vjp} or \gls{jvp}) consistent with the underlying physics. This choice is critical: incorrect custom gradients can drive optimization toward physically meaningless solutions even when the numerical objective decreases.
+
+\subsection{Example: Path Optimization and Implicit Differentiation}\labsec{drt-implicit-diff}
+
+Custom gradients are particularly useful when the forward model contains an iterative solver~\sidecite{Eertmans2026EuCAP}. In the Fermat-based path optimization problem of \refch{path-tracing}, the ray path is obtained by minimizing a convex objective $L(\bsit{T};\bsit{\theta})$, where $\bsit{\theta}$ denotes scene or transceiver parameters (e.g., geometry or antenna positions). The solver updates $\bsit{T}$ until convergence, and many iterations may be required to reach $\bsit{T}^\star(\bsit{\theta})$.
+
+If this procedure is differentiated naively, reverse mode must backpropagate through all iterations. In practice, this leads to substantial compute and memory overhead, because the optimization trajectory must be traversed in both directions. A standard alternative is to apply the implicit function theorem~\sidecite[][Thm.~7.6]{Apostol1957}, so that gradients of $\bsit{T}^\star$ are obtained from optimality conditions instead of full unrolling.
+
+At convergence, the optimal path $\bsit{T}^\star(\bsit{\theta})$ satisfies
+\begin{equation}
+  \nabla_{\bsit{T}} L(\bsit{T}^\star(\bsit{\theta});\bsit{\theta}) = \bsit{0},
+\end{equation}
+and total differentiation with respect to $\bsit{\theta}$ gives
+\begin{equation}
+  \frac{\partial}{\partial \bsit{\theta}} \nabla_{\bsit{T}} L(\bsit{T}^\star(\bsit{\theta}); \bsit{\theta}) + \frac{\partial \nabla_{\bsit{T}} L}{\partial \bsit{T}} \frac{\partial \bsit{T}^\star}{\partial \bsit{\theta}} = \bsit{0}.
+\end{equation}
+
+Therefore,
+\begin{equation}
+  \frac{\partial \bsit{T}^\star}{\partial \bsit{\theta}} = -\left[\frac{\partial \nabla_{\bsit{T}} L}{\partial \bsit{T}}\right]^{-1} \frac{\partial}{\partial \bsit{\theta}} \nabla_{\bsit{T}} L.
+\end{equation}
+
+In reverse-mode \gls{ad}, vector--Jacobian products of the form $\bsit{v}^\top \frac{\partial \bsit{T}^\star}{\partial \bsit{\theta}}$ are typically required. These can be computed efficiently through the linear system
+
+\begin{equation}
+  \bsit{u}^\top = -\bsit{v}^\top \left[\frac{\partial \nabla_{\bsit{T}} L}{\partial \bsit{T}}\right]^{-1},
+\end{equation}
+
+or equivalently
+
+\begin{equation}
+  \left[\frac{\partial \nabla_{\bsit{T}} L}{\partial \bsit{T}}\right]^\top\bsit{u} = -\bsit{v},
+\end{equation}
+where $\frac{\partial \nabla_{\bsit{T}} L}{\partial \bsit{T}}$ is the Hessian of the convex function $L$ and is therefore symmetric positive semidefinite. This yields
+
+\begin{equation}
+  \bsit{v}^\top \frac{\partial \bsit{T}^\star}{\partial \bsit{\theta}} = \bsit{u}^\top \frac{\partial}{\partial \bsit{\theta}} \nabla_{\bsit{T}} L.
+\end{equation}
+
+This approach still relies on \gls{ad} for the remaining Jacobian--vector terms, but this is not a practical limitation and can be further optimized, as discussed in \refch{efficient-path-tracing}. \reflisting{jax-implicit-diff} illustrates this implicit-differentiation strategy in JAX.
+
+While implicit differentiation is a highly efficient technique for computing gradients, it cannot be applied in all cases. First, we assume that the forward model can be expressed as the solution to an optimization problem, which is not the case, or at least not straightforward, in many applications. Second, we must assume convergence (the local optimality condition), which is also not always easy to guarantee, much like in a machine learning model or an iterative solver that has not perfectly converged. When these assumptions are violated, or when the linear system for the backward solve becomes poorly conditioned near grazing or topological-transition regimes, the implicit formulation can become unstable or fail to represent the intended physical branch, making a fallback to explicit differentiation necessary.
+
+\begin{listing}
+  \ContinuedFloat*
+  \caption{Example of implicit differentiation for the Fermat-based path tracing method in its convex setting. The path length function \texttt{L} is defined as in \eqref{eq:fermat_param}, where $\bsit{\theta} = (\bsit{A}, \bsit{B})$, and the optimal path $\bsit{T}^\star$ is returned by the \texttt{f} function. Static parameters may include the number of iterations, convergence thresholds, or solver hyperparameters; however, they are assumed not to impact the final solution.}
+  \lablisting{jax-implicit-diff}
+  \inputminted[firstline=13,lastline=33]{python}{codes/jax-implicit-diff.py}
+\end{listing}
+
+\begin{listing}
+  \ContinuedFloat
+  \caption{Example of implicit differentiation for the Fermat-based path tracing method in its convex setting (continued). First, the static parameters are ignored to emphasize that the optimal path does not depend on these parameters. Next, the results from the forward pass are unpacked. The gradient of the objective is obtained with \texttt{jax.grad}, and the Hessian is obtained with \texttt{jax.hessian}. Finally, a linear solve is performed to compute the vector--Jacobian product without unrolling the optimization trajectory. The Hessian's positive semi-definiteness is leveraged to employ a more efficient linear solver.}
+  \inputminted[firstline=36,lastline=69]{python}{codes/jax-implicit-diff.py}
+\end{listing}
+
+\section{Resolving Geometric Discontinuities and Topological Transitions}\labsec{drt-discontinuities}
+
+The shift to differentiable ray tracing enables gradient-based optimization for diverse radio network applications, ranging from high-fidelity radio map calibration~\sidecite{CastroFarfan2025} to physical-world adversarial attacks via optimized object placement~\sidecite{Han2025Loki}. However, this paradigm exposes a critical structural flaw: the omnipresence of geometric discontinuities and discrete topological transitions.
+
+A fundamental challenge in differentiable ray tracing is the treatment of these discontinuities caused by visibility events and discrete path-topology changes~\sidecite{Fischer2023,Eertmans2024EuCAP}. These discontinuities can hinder gradient-based optimization by creating zero-gradient regions in which no descent direction is available.
+
+\subsection{Sources of Discontinuities}
+
+\begin{figure}
+  \centering
+  \inputtikz{power-discontinuity}
+  \caption{Example of discontinuities in ray traced power maps. The color gradient represents received power (\unit{\decibel}), where shadow boundaries (dashed blue lines) create sharp discontinuities. These transitions pose challenges for gradient-based optimization. The white regions indicate \enquote{deep shadows,} as using a finite number of simulated paths eventually results in zero-gradient regions.}
+  \labfig{power-discontinuity}
+\end{figure}
+
+Because ray tracing relies on discrete geometric decisions---for example, whether an object occludes a ray or a triangle intersection test verifies barycentric coordinates---discontinuities in the objective function are common. The resulting objective is piecewise and often locally constant, with limited smooth transitions.
+
+These discontinuities appear whenever branching occurs in the ray tracing process. For example, when a ray transitions from being visible to being occluded, the received power can drop sharply, creating a discontinuity. Similarly, when the path topology changes (e.g., a new reflection or diffraction path appears or disappears), the objective can experience sudden jumps. Surface transitions, such as moving from one material to another, can also introduce discontinuities in the received signal.
+
+Another source of discontinuity is the finite number of simulated paths. In practice, ray tracing algorithms often simulate a limited number of paths due to computational constraints. This can lead to zero-gradient regions in deep shadows, where no paths are simulated and the objective remains constant across a wide neighborhood. This is illustrated in \reffig{power-discontinuity}, where the white regions represent deep shadows with zero gradients.
+
+These discontinuities appear as zero-gradient regions---\enquote{plateaus}---or sudden jumps, both of which obstruct gradient-based optimization. A typical visibility predicate can be modeled as a Heaviside step function $H(x)$ over a signed geometric residual $x$; consequently, the objective changes abruptly when crossing geometric boundaries.
+
+At non-smooth points, the classical gradient may be undefined. In practice, \gls{ad} frameworks will use a \emph{subgradient}, i.e., a generalized local slope used as a replacement direction for descent, in order to avoid runtime errors~\sidecite{Bubeck2015}.
+
+This helps at some specific points, but it does not solve the deep-shadow problem. When the objective is locally constant over a finite region, the subgradient is still zero, so moving a transmitter within that plateau provides no descent direction. As a result, naive gradient-based methods can stall until additional smoothing or exploration is introduced.
+
+Three families of methods are commonly used to address this non-differentiability:
+\begin{itemize}
+  \item \emph{Stochastic smoothing and plateau reduction} methods, such as Gaussian smoothing, convolve the objective function or the forward operator globally with a continuous kernel to recover nonzero descent directions~\sidecite{Fischer2023}. Recent wireless localization frameworks apply this idea by convolving the signal-generation process with a Gaussian kernel to overcome sparse gradients~\sidecite{Han2025RayLoc}. While effective at eliminating plateaus, these methods generally require repetitive Monte Carlo sampling that scales poorly in dense multipath scenes.
+  \item \emph{Edge-sampling} methods sample rays directly on geometric boundaries to estimate derivative contributions from edges with high accuracy~\sidecite{Li2018}. However, because they are designed to differentiate area integrals over pixel footprints in computer graphics rendering, they are fundamentally incompatible with the deterministic point-to-point path-finding setup used in radio propagation.
+  \item \emph{Analytical smoothing (physics-based)} methods replace hard visibility predicates with continuous surrogates at the lowest physical level of the ray tracing engine~\sidecite{Eertmans2024EuCAP}. Similar techniques have recently been applied to the \gls{sbr} method for solving inverse scattering problems on complex 3D targets~\sidecite{Liu2025}. They are highly practical for radio propagation optimization because they resolve the exact source of the discontinuity and vectorize efficiently on modern accelerators.
+\end{itemize}
+
+\subsection{Discontinuity Smoothing via Approximation Functions}
+
+To mitigate abrupt visibility transitions without abandoning exact path formulations, a smoothing function $s(x;\alpha)$ can be introduced to approximate the underlying discrete behavior~\sidecite{Eertmans2024EuCAP}. Let the visibility or intersection condition be represented by the unit step function $\theta(x)$, where $\theta(x)=1$ if $x>0$ and 0 otherwise.
+
+The approximation maps a real-valued residual to a continuous value in $[0,1]$ and satisfies
+\begin{equation}
+  \lim_{\alpha\rightarrow\infty} s(x;\alpha) = \theta(x),
+\end{equation}
+where $\alpha\in\mathbb{R}^+$ controls steepness. In practice, smoothing is often parameterized as
+\begin{equation}
+  s(x;\alpha) = s(\alpha x),
+\end{equation}
+which directly controls transition width through $\alpha$.
+
+To maintain reliable optimization behavior, the smoothing function should satisfy the following criteria:
+\begin{enumerate}
+\item[C1)]
+  The smoothing map must remain bounded in the unit interval to preserve consistency with Boolean logic,
+  \begin{equation}
+    s: \mathbb{R} \rightarrow [0,1].
+  \end{equation}
+
+\item[C2)]
+The asymptotic behavior must match the hard predicate so that the smoothing function converges to the original decision rule,
+\begin{equation}
+  \lim_{x\rightarrow -\infty} s(x) = 0
+  \qquad \text{and} \qquad
+  \lim_{x\rightarrow +\infty} s(x) = 1.
+\end{equation}
+
+\item[C3)]
+The transition must be strictly monotonically increasing to support stable gradient flow and avoid artificial local minima,
+\begin{equation}
+s(x) \text{ is strictly monotonically increasing}.
+\end{equation}
+
+\item[C4)]
+The boundary should be centered so that both sides are treated symmetrically at the discontinuity,
+\begin{equation}
+s(0) = \frac{1}{2}.
+\end{equation}
+
+\item[C5)]
+The profile should be balanced around the boundary to enforce odd symmetry with respect to the centered value,
+\begin{equation}
+s(x) - s(0) = s(0) - s(-x).
+\end{equation}
+\end{enumerate}
+
+\subsubsection{Examples of Smoothing Functions}
+\begin{figure}
+\inputtikz{smoothing-functions}
+\caption{Examples of smoothing functions that satisfy the criteria C1--C5. The parameter $\alpha$ controls the transition steepness, with larger values providing a sharper approximation to the step function.}
+\labfig{smoothing-functions}
+\end{figure}
+
+Borrowing from machine learning activation functions, two common families satisfy these properties. The first is the parameterized \emph{sigmoid}, defined as
+\begin{equation}
+\text{sigmoid}(x;\alpha) = \frac{1}{1 + e^{-\alpha x}}.
+\end{equation}
+
+As $\alpha\rightarrow\infty$, $\text{sigmoid}(x;\alpha)\rightarrow\theta(x)$. The sigmoid is infinitely differentiable and smooth everywhere, but exponential evaluations can be relatively costly. A faster alternative is the \emph{hard sigmoid}, a piecewise-linear function, given by
+\begin{equation}
+\text{hard sigmoid}(x;\alpha) = \frac{\min(\max(0, \alpha x+3), 6)}{6}.
+\end{equation}
+
+The hard sigmoid is faster to compute but has discontinuous derivatives at $x=\pm3/\alpha$, bounding its gradient support. The choice depends on the desired trade-off between global smoothness and evaluation cost.
+
+A comparative plot of sigmoid and hard-sigmoid approximations for several $\alpha$ values is reported in \reffig{smoothing-functions}, highlighting the trade-off between transition sharpness and gradient support. \Cref{fig:power-map-smoothed,fig:gradient-map-smoothed} illustrate the impact of smoothing on ray traced power maps and their gradients, showing reduced plateaus and smoother transitions near shadow boundaries. An important downside of smoothing is that it can introduce leakage through obstacles, which may bias optimization if not properly controlled. These surrogates are therefore best interpreted as numerical regularizations, although they loosely mimic physically smooth effects such as penetration loss, surface roughness, and diffraction-induced transition regions. When those mechanisms matter quantitatively, they should be modeled explicitly rather than absorbed into the smoothing function.
+
+\begin{figure*}
+\centering
+\begin{subfigure}[t]{0.49\contentwidth}
+\centering
+\import{pgf}{power-map-exact.pgf}
+\caption{Exact power map.}
+\labfig{power-map-exact}
+\end{subfigure}
+\begin{subfigure}[t]{0.49\contentwidth}
+\centering
+\import{pgf}{power-map-approx.pgf}
+\caption{Approximate power map with smoothing.}
+\labfig{power-map-approx}
+\end{subfigure}
+\caption{Smoothing effects on the power map (\unit{\dB}) using the sigmoid function with $\alpha=50$.}
+\labfig{power-map-smoothed}
+\end{figure*}
+
+\begin{figure*}
+\centering
+\begin{subfigure}[t]{0.49\contentwidth}
+\centering
+\import{pgf}{power-gradient-exact.pgf}
+\caption{Exact gradient map.}
+\labfig{power-gradient-exact}
+\end{subfigure}
+\begin{subfigure}[t]{0.49\contentwidth}
+\centering
+\import{pgf}{power-gradient-approx.pgf}
+\caption{Approximate gradient map with smoothing.}
+\labfig{power-gradient-approx}
+\end{subfigure}
+\caption{Smoothing effects on the gradient of the power shown in \reffig{power-map-smoothed} (log-scale of the gradient norm).}
+\labfig{gradient-map-smoothed}
+\end{figure*}
+
+\subsubsection{Continuation Strategy for Optimization}
+
+Using a fixed, aggressive smoothing level can bias the final solution. If $\alpha$ remains too small, obstacles become unrealistically translucent and the optimizer may drift away from the physically correct optimum. A practical strategy is therefore continuation: start with strong smoothing (small $\alpha$) to remove plateaus and obtain informative, long-range gradients, then gradually increase $\alpha$ so that the model hardens and approaches the physical discontinuous regime. A convenient schedule over $N$ optimization steps is
+\begin{equation}
+\alpha^{(i)} = \alpha_0\left(\frac{\alpha_f}{\alpha_0}\right)^{\frac{i}{N-1}}, \qquad i=0,\ldots,N-1,
+\end{equation}
+with $\alpha_0\ll\alpha_f$. This geometric progression provides a smooth transition from global exploration to physically faithful refinement.
+
+\subsubsection{Example: Optimizing Transmitter Position}
+
+To illustrate the practical effect of smoothing, we consider a simple optimization scenario adapted from~\sidecite{Eertmans2024EuCAP}. The scene contains a single obstacle, two fixed receivers $\text{\glsxtrshort{rx}}_1$ and $\text{\glsxtrshort{rx}}_2$, and one transmitter with planar coordinates $(x,y)$ to optimize. To keep the setting minimal and interpretable, only \gls{line-of-sight} paths are simulated.
+
+The objective is to maximize the weakest received power between the two receivers,
+\begin{equation}
+F(x,y) = \min\big(P^{\text{\glsxtrshort{rx}}_1}(x,y),\,P^{\text{\glsxtrshort{rx}}_2}(x,y)\big),
+\end{equation}
+where $P^{\text{\glsxtrshort{rx}}_i}(x,y)$ denotes the received power at receiver $i$ for a transmitter placed at $(x,y)$. This max--min formulation avoids favoring one receiver at the expense of the other and is therefore well suited to coverage-oriented placement.
+
+The transmitter is initialized in a deep \gls{shadow region} where the exact objective is nearly flat and gradients are uninformative. We then run gradient ascent with the continuation schedule introduced above, starting from strong smoothing ($\alpha_0 = 1$) to recover usable ascent directions and progressively increasing $\alpha$ to approach the physically accurate objective ($\alpha_f = 100$).
+
+\begin{figure*}
+\centering
+\begin{subfigure}[t]{0.24\contentwidth}
+\centering
+\import{pgf}{optimize-25.pgf}
+\caption{After 25 iterations.}
+\labfig{optimize-25}
+\end{subfigure}
+\begin{subfigure}[t]{0.24\contentwidth}
+\centering
+\import{pgf}{optimize-50.pgf}
+\caption{After 50 iterations.}
+\labfig{optimize-50}
+\end{subfigure}
+\begin{subfigure}[t]{0.24\contentwidth}
+\centering
+\import{pgf}{optimize-75.pgf}
+\caption{After 75 iterations.}
+\labfig{optimize-75}
+\end{subfigure}
+\begin{subfigure}[t]{0.24\contentwidth}
+\centering
+\import{pgf}{optimize-100.pgf}
+\caption{After 100 iterations.}
+\labfig{optimize-100}
+\end{subfigure}
+\caption{Optimization trajectory for transmitter placement under the max--min objective $F$. The four panels show intermediate iterates (25, 50, 75, and 100 iterations). As optimization proceeds, the transmitter exits the initial shadowed region and moves toward a location that improves the worst served receiver. The corresponding smoothing values increase geometrically, illustrating the continuation strategy from smooth exploration to sharper, physically faithful refinement.}
+\labfig{transmitter-optimization}
+\end{figure*}
+
+\subsection{Continuous Ray Tracing Framework}
+
+Implementing physics-based analytical smoothing fundamentally transforms the discrete ray tracing pipeline into a continuous surrogate process entirely suitable for end-to-end gradient-based optimization.
+
+\subsubsection{Continuous Validity Check}
+
+A path-validity check is naturally Boolean; for example, $x_0>x_1$ determines whether a ray clears an obstacle edge. Replacing this hard condition with the smooth surrogate yields $s(x_0-x_1)$. The validity measure $V(\bsit{X})$ for a candidate ray path $\bsit{X}$ then becomes continuous in $[0, 1]$.
+
+This smoothing enables depth-wise attenuation through walls and edge softening for reflections and occlusions, seamlessly translating geometric properties into continuous path-validity scores. The simulated received electric field adapts directly to this continuum,
+\begin{equation}\label{eq:field_approx}
+\bsup{E}^\text{\glsxtrshort{rx}} = \sum\limits_{p \in \mathcal{P}} V(\bsit{X}) \tilde{\bsup{E}}_p^\text{\glsxtrshort{rx}},
+\end{equation}
+where $\mathcal{P}$ is the set of all potential path candidates and $\tilde{\bsup{E}}_p^\text{\glsxtrshort{rx}}$ is the electric field contribution from path $p$ assuming no obstacles.
+
+The product of validity scores along a path candidate naturally captures the cumulative effect of multiple interactions, so that paths with more interactions are attenuated more strongly when they approach occlusion. This continuous formulation also allows for smooth transitions between different path topologies, as the validity scores can vary continuously even when the underlying geometric configuration changes discretely. It forms a sort of \enquote{confidence score} for each path candidate, which can be used to guide optimization and path selection.
+
+\subsubsection{Continuous Path Finding}
+
+Beyond \gls{line-of-sight} visibility tests, exact path finding typically relies on a post-processing check to verify (i) convergence and (ii) that ray path coordinates are well within the object boundaries. As with Boolean visibility gates, replacing these binary convergence predicates with $s(x;\alpha)$ makes the solver behavior fully continuous with respect to the underlying mesh geometry.
+
+This smoothing-based reformulation remains compatible with exact path-finding backends while replacing Boolean gates with differentiable surrogates. In practical network optimization, this allows gradient descent to continue progressing smoothly even when the current iterate is initially placed inside a deeply occluded region that would otherwise yield exactly zero gradients.
+
+\section{Conclusion}
+
+This chapter established the main ingredients required before large-scale implementation: inverse-design motivation, reverse-mode \gls{ad}, scene parameterization, framework-level differentiation constraints, differentiable path-coordinate recovery, and discontinuity regularization.
+
+These ingredients are necessary but not sufficient for practical deployment. In realistic environments, the dominant obstacle is computational scale: combinatorial growth of path candidates, expensive intersection workloads, and reverse-mode tape-memory growth.
+
+\refch{efficient-path-tracing} therefore focuses on tractability mechanisms for path generation and validation, including pruning, acceleration structures, hardware execution models, and memory-management strategies that make differentiable ray tracing viable in large scenes.

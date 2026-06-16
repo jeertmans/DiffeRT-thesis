@@ -1,0 +1,56 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{decorations.markings}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\hat{\bsup{#1}}}
+\begin{tikzpicture}[>=latex]
+
+  % Style to place arrows anywhere along a path
+  \tikzset{
+    ->-/.style={decoration={
+        markings,
+    mark=at position #1 with {\arrow{>}}},postaction={decorate}}
+  }
+
+  % Coordinates
+  \coordinate (O)   at (0,0);
+  \coordinate (S0)  at (0.8, 2.7);
+  \coordinate (R)   at (1.7, 1.6);
+  \coordinate (Rdr) at (2.8, 1.25);
+  \coordinate (Ss)  at (4.2, 1.05);
+
+  % Axes (simple perspective)
+  \draw[->,thick] (O) -- (4.3,0) node[below] {$y$};
+  \draw[->,thick] (O) -- (0,3.8) node[left] {$z$};
+  \draw[->,thick] (O) -- (-1.7,-1.2) node[below] {$x$};
+
+  % Curved Trajectory
+  \draw[dashed,thick] (0.4, 3.8) to[out=-75, in=115] (S0);
+  \draw[thick, ->-=0.55] (S0) to[out=-65, in=135] (R);
+  \draw[thick] (R) to[out=-45, in=-180] coordinate[pos=0.8] (NRdr) (Rdr);
+  \draw[thick, ->-=0.6] (Rdr) to[out=0, in=170] (Ss);
+  \draw[dashed,thick] (Ss) to[out=-10, in=160] (5.2, 0.7);
+
+  \coordinate (Rdr) at (NRdr);
+
+  % Labels and Points
+  % Point labels s=0 and s=s
+  \fill (S0) circle (1.3pt);
+  \node[anchor=west] at ([xshift=2pt]S0) {$s=0$};
+
+  \fill (Ss) circle (1.3pt);
+  \node[anchor=south] at ([yshift=2pt]Ss) {$s=s$};
+
+  % Position vectors r and r+dr
+  \draw[opacity=0.5, thick,->] (O) -- (R) node[midway,above,sloped] {$\bsup{r}$};
+  \draw[opacity=0.5, thick,->] (O) -- (Rdr) node[pos=0.6,below,sloped] {$\bsup{r}+\mathrm{d}\bsup{r}$};
+
+  % Differential displacement dr along the curve (drawn as straight secant)
+  \draw[opacity=0.5, dashed, thick,->] (R) -- (Rdr) node[midway,above,sloped] {$\mathrm{d}\bsup{r}$};
+
+  % Local tangent relation
+  \node at (2.35,-0.95) {$\mathrm{d}\bsup{r}=\uvec{s}\,\mathrm{d}s$};
+
+\end{tikzpicture}

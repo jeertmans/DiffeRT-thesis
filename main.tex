@@ -1,0 +1,451 @@
+% Load the kaobook class
+\documentclass[
+  draftbib,
+  %draftfigures,
+  draftglossaries,
+  f24paper,  % 16.0cm x 24.0cm paper size
+  fontsize=10pt, % Base font size
+  twoside=true, % Use different layouts for even and odd pages (in particular, if twoside=true, the margin column will be always on the outside)
+  %open=any, % If twoside=true, uncomment this to force new chapters to start on any page, not only on right (odd) pages
+  secnumdepth=2, % How deep to number headings. Defaults to 1 (sections)
+  listing=minted,
+  numbers=noenddot,
+]{kaobook}
+
+% Set up layouts
+
+\setlength{\headheight}{5.0mm}
+\setlength{\headsep}{5.0mm}
+%\setlength{\footheight}{5.0mm}
+\setlength{\footskip}{10.0mm}
+
+\newif\ifprintedversion
+\printedversiontrue % Set to true to enable the printing version (e.g., for the final PDF sent to the printing factory), which uses a different color scheme and centers content on a A4 page with larger margins.
+
+\ifprintedversion
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\renewcommand{\marginlayout}{%
+  \newgeometry{
+    top=58.5mm, % height of the top margin
+    bottom=58.5mm, % height of the bottom margin
+    inner=45.0mm, % width of the inner margin
+    textwidth=85.0mm, % width of the text
+    marginparsep=5.0mm, % width between text and margin
+    marginparwidth=30.0mm, % width of the margin
+  }%
+}
+
+\renewcommand{\widelayout}{%
+  \newgeometry{
+    top=58.5mm, % height of the top margin
+    bottom=58.5mm, % height of the bottom margin
+    inner=45.0mm, % width of the inner margin
+    outer=45.0mm, % width of the outer margin
+    marginparsep=0.0mm, % width between text and margin
+    marginparwidth=0.0mm, % width of the margin
+  }%
+}
+
+\renewcommand{\fullwidthpage}{%
+  \newgeometry{
+    top=48.5mm,
+    bottom=48.5mm,
+    inner=45mm,
+    outer=45mm,
+    marginparwidth=0mm,
+    marginparsep=0mm,
+  }%
+}
+\else
+\renewcommand{\marginlayout}{%
+  \newgeometry{
+    top=30.0mm, % height of the top margin
+    bottom=30.0mm, % height of the bottom margin
+    inner=20.0mm, % width of the inner margin
+    textwidth=85.0mm, % width of the text
+    marginparsep=5.0mm, % width between text and margin
+    marginparwidth=30.0mm, % width of the margin
+  }%
+}
+
+\renewcommand{\widelayout}{%
+  \newgeometry{
+    top=30.0mm, % height of the top margin
+    bottom=30.0mm, % height of the bottom margin
+    inner=20.0mm, % width of the inner margin
+    outer=20.0mm, % width of the outer margin
+    marginparsep=0.0mm, % width between text and margin
+    marginparwidth=0.0mm, % width of the margin
+  }%
+}
+
+\renewcommand{\fullwidthpage}{%
+  \newgeometry{
+    top=20mm,
+    bottom=20mm,
+    inner=20mm,
+    outer=20mm,
+    marginparwidth=0mm,
+    marginparsep=0mm,
+  }%
+}
+\fi
+
+% Choose the language
+\usepackage[english]{babel} % Load characters and hyphenation
+\usepackage[english=american]{csquotes} % American quotes
+
+% Load packages for testing
+%\usepackage{blindtext}
+%\usepackage{showframe} % Uncomment to show boxes around the text area, margin, header and footer
+%\usepackage{showlabels} % Uncomment to output the content of \label commands to the document where they are used
+
+% Load the bibliography package
+\usepackage{kaobiblio}
+\addbibresource{references.bib} % Bibliography file
+
+% Load mathematical packages for theorems and related environments
+\usepackage{kaotheorems}
+
+% Load the package for hyperreferences
+\usepackage{kaorefs}
+
+\makeindex[columns=2, title=Alphabetical Index, intoc] % Make LaTeX produce the files required to compile the index
+
+\makeglossaries % Make LaTeX produce the files required to compile the glossary
+\import{./}{glossary.tex} % Include the glossary definitions
+
+\makenomenclature % Make LaTeX produce the files required to compile the nomenclature
+
+% Custom acronym commands to add hyphen
+\usepackage{xstring}
+\usepackage{etoolbox} % We need rebust commands to use \StrSubstitute inside captions
+\newrobustcmd{\glshyph}[1]{%
+  \ifglshaslong{#1}%
+  {\StrSubstitute{\glsentrylong{#1}}{ }{-}[\hyphresult]}%
+  {\StrSubstitute{\glsentryname{#1}}{ }{-}[\hyphresult]}%
+  \glslink{#1}{\hyphresult}%
+}
+
+% Array
+\usepackage{blkarray}
+
+% Floats placement
+% https://tex.stackexchange.com/a/118667
+\usepackage[section]{placeins}
+\makeatletter
+\AtBeginDocument{%
+  \expandafter\renewcommand\expandafter\subsection\expandafter{%
+    \expandafter\@fb@secFB\subsection
+  }%
+}
+\makeatother
+
+% Icons
+\usepackage{fontawesome5}
+
+% Imports
+\usepackage{import}
+
+\def\mathdefault#1{#1}
+\everymath=\expandafter{\the\everymath\displaystyle}
+
+% Subfigures
+\usepackage{subcaption}
+
+% TikZ
+\usepackage{tikz}
+\usepackage{tikz-3dplot}
+\usepackage{tkz-euclide}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+% START: PGFPlots/TikZ libraries
+\usepgfplotslibrary{colorbrewer} % Automatically imported from files objects-embeddings-order1.tex, objects-embeddings-order2.tex, objects-embeddings-order3.tex, scene-embeddings-order1.tex, scene-embeddings-order2.tex, scene-embeddings-order3.tex
+\usepgfplotslibrary{groupplots} % Automatically imported from files inverse-localization-optimization-fixed.tex, inverse-localization-optimization.tex, material-calibration-optimization.tex, optimization-antenna-orientation-pattern.tex, optimization-antenna-orientation.tex
+\usepgfplotslibrary{polar} % Automatically imported from files antenna-pattern.tex
+\usetikzlibrary{3d} % Automatically imported from files circular-polarisation.tex, edge-fixed-coordinate-system.tex, keller-cone.tex, plane-wave.tex, ray-tube.tex, scattering-er-model.tex, specular-reflection-curved-surface.tex, specular-reflection.tex, wedge-keller-cone.tex, wedge-with-curvature.tex
+\usetikzlibrary{angles} % Automatically imported from files circular-polarisation.tex, keller-cone.tex, knife-edge-parameters.tex, plane-wave.tex, ray-tube-diverging.tex, reflected-and-refracted-waves.tex, slab-transmission-multi-layer.tex, slab-transmission-single-layer.tex, training-procedure.tex, two-ray-model.tex
+\usetikzlibrary{arrows.meta} % Automatically imported from files antenna-field-regions.tex, edge-fixed-coordinate-system.tex, go-regions.tex, go.tex, ray-coordinate-system.tex, ray-tube-diverging.tex, ray-tube.tex, ris-example.tex, slab-transmission-multi-layer.tex, wedge-keller-cone.tex, wedge-with-curvature.tex
+\usetikzlibrary{bbox} % Automatically imported from files antenna-pattern.tex
+\usetikzlibrary{bending} % Automatically imported from files circular-polarisation.tex, knife-edge-parameters.tex, plane-wave.tex, ris-example.tex
+\usetikzlibrary{calc} % Automatically imported from files ablation-sampling-size.tex, action-pruning.tex, antenna-regions.tex, edge-fixed-coordinate-system.tex, fpt-benchmarks.tex, go.tex, huygens-principle.tex, knife-edge-parameters.tex, min-path-tracing-f-function.tex, min-path-tracing-i-function.tex, min-path-tracing-iterations-1.tex, min-path-tracing-iterations-2.tex, min-path-tracing-iterations-3.tex, min-path-tracing-iterations-4.tex, min-path-tracing-top-down.tex, min-path-tracing.tex, ml-model.tex, ml-pipeline.tex, path-candidates-graph.tex, ray-coordinate-system.tex, ray-tube-diverging.tex, ray-tube.tex, reflected-and-refracted-waves.tex, ris-example.tex, ris.tex, sampling-benchmarks.tex, scattering.tex, slab-transmission-multi-layer.tex, slab-transmission-single-layer.tex, three-scales.tex, training-procedure.tex, two-ray-model.tex, wedge-diffraction-geometry-annotated.tex, wedge-diffraction-geometry.tex, wedge-keller-cone.tex, wedge-with-curvature.tex
+\usetikzlibrary{decorations.markings} % Automatically imported from files fermat-path-problem.tex, ray-coordinate-system.tex, ray-tube-diverging.tex, ray-tube.tex
+\usetikzlibrary{decorations.pathmorphing} % Automatically imported from files edge-fixed-coordinate-system.tex, fermat-path-problem.tex, go-regions.tex, scattering-er-model.tex, scattering.tex, slab-transmission-multi-layer.tex, slab-transmission-single-layer.tex, wedge-diffraction-geometry-annotated.tex, wedge-diffraction-geometry.tex, wedge-keller-cone.tex, wedge-with-curvature.tex
+\usetikzlibrary{decorations.pathreplacing} % Automatically imported from files go.tex, ml-model.tex, ris-gamma.tex, slab-transmission-multi-layer.tex, slab-transmission-single-layer.tex
+\usetikzlibrary{decorations.text} % Automatically imported from files moller-trumbore-smoothing.tex
+\usetikzlibrary{fadings} % Automatically imported from files go.tex, moller-trumbore-smoothing.tex
+\usetikzlibrary{fit} % Automatically imported from files action-pruning.tex, image-tree.tex, path-candidates-tree.tex, training-procedure.tex
+\usetikzlibrary{graphs} % Automatically imported from files path-candidates-graph.tex
+\usetikzlibrary{graphs.standard} % Automatically imported from files path-candidates-graph.tex
+\usetikzlibrary{intersections} % Automatically imported from files ad-forward-mode.tex, ad-reverse-mode.tex, exact-path-problem.tex, image-method.tex, knife-edge-parameters.tex, min-path-tracing-iterations-1.tex, min-path-tracing-iterations-2.tex, min-path-tracing-iterations-3.tex, min-path-tracing-iterations-4.tex
+\usetikzlibrary{math} % Automatically imported from files scattering.tex
+\usetikzlibrary{patterns} % Automatically imported from files edge-fixed-coordinate-system.tex, go-regions.tex, masking-unreachable-objects.tex, path-candidate-visibility-from-rx.tex, path-candidate-visibility-from-tx.tex, path-candidate-visibility.tex, path-candidates-sequential-decision-geometry.tex, ray-tube.tex, reflected-and-refracted-waves.tex, slab-transmission-multi-layer.tex, slab-transmission-single-layer.tex, two-ray-model.tex, wedge-diffraction-geometry-annotated.tex, wedge-diffraction-geometry.tex, wedge-keller-cone.tex, wedge-with-curvature.tex
+\usetikzlibrary{patterns.meta} % Automatically imported from files exact-path-problem.tex, image-method.tex, image-source-method.tex, min-path-tracing-f-function.tex, min-path-tracing-i-function.tex, min-path-tracing-iterations-1.tex, min-path-tracing-iterations-2.tex, min-path-tracing-iterations-3.tex, min-path-tracing-iterations-4.tex, multipath-0.tex, multipath-1.tex, multipath-2.tex, multipath-3.tex, path-validity-object-too-small.tex, path-validity-ray-obstructed.tex, power-discontinuity.tex, ray-launching-double-hit.tex, ray-launching-miss.tex, ray-launching.tex, valid-invalid-ray-paths-1.tex, valid-invalid-ray-paths-2.tex, valid-invalid-ray-paths-3.tex
+\usetikzlibrary{pgfplots.groupplots} % Automatically imported from files receiver-power-mobility.tex
+\usetikzlibrary{positioning} % Automatically imported from files ml-pipeline.tex, three-scales.tex
+\usetikzlibrary{quotes} % Automatically imported from files circular-polarisation.tex, keller-cone.tex, knife-edge-parameters.tex, plane-wave.tex, ray-tube-diverging.tex, reflected-and-refracted-waves.tex, slab-transmission-multi-layer.tex, slab-transmission-single-layer.tex, two-ray-model.tex
+\usetikzlibrary{shapes.arrows} % Automatically imported from files three-scales.tex
+\usetikzlibrary{shapes.geometric} % Automatically imported from files action-pruning.tex, bvh.tex, kd-tree.tex, ml-model.tex
+\usetikzlibrary{shapes.misc} % Automatically imported from files exact-path-problem.tex, go-regions.tex, image-method.tex, image-source-method.tex, keller-cone.tex, knife-edge-parameters.tex, masking-unreachable-objects.tex, min-path-tracing-f-function.tex, min-path-tracing-i-function.tex, min-path-tracing-iterations-1.tex, min-path-tracing-iterations-2.tex, min-path-tracing-iterations-3.tex, min-path-tracing-iterations-4.tex, min-path-tracing-top-down.tex, min-path-tracing.tex, multipath-0.tex, multipath-1.tex, multipath-2.tex, multipath-3.tex, path-candidate-visibility-from-rx.tex, path-candidate-visibility-from-tx.tex, path-candidate-visibility.tex, path-validity-object-too-small.tex, path-validity-ray-obstructed.tex, power-discontinuity.tex, ray-launching-double-hit.tex, ray-launching-miss.tex, ray-launching.tex, ris-example.tex, ris-gamma.tex, ris-phase-gradient.tex, specular-reflection-curved-surface.tex, specular-reflection.tex, two-ray-model.tex, valid-invalid-ray-paths-1.tex, valid-invalid-ray-paths-2.tex, valid-invalid-ray-paths-3.tex, wedge-diffraction-geometry-annotated.tex, wedge-diffraction-geometry.tex, wedge-keller-cone.tex
+% END: PGFPlots/TikZ libraries
+
+% TODO: disable TikZ externalization when compiling full document
+% to avoid losing hyperlinks to acronyms, etc.
+% TikZ externalization
+\usetikzlibrary{external}
+\tikzexternalize[prefix=tikzexternalize/]
+
+\tikzset{>=latex,line join=round,line cap=round}
+
+\newcommand{\inputtikz}[1]{%
+  \tikzsetnextfilename{#1}%
+  \import{tikz/}{#1.tex}%
+}
+
+% Units
+\usepackage{siunitx}
+\ifxetexorluatex
+\AtBeginDocument{\robustify\pi}  % https://tex.stackexchange.com/a/597999/240238
+\fi
+\sisetup{input-digits = 0123456789\pi}
+
+% Special commands
+\ifprintedversion
+\colorlet{gh-pr}{black!50}
+\hypersetup{
+  citecolor  = black!50,
+  urlcolor   = black!50,
+}
+\usemintedstyle{friendly_grayscale} % Set the minted style to a grayscale style for the printed version
+\else
+\usemintedstyle{friendly} % Set the minted style to a colorful style for the digital version, similar to the default theme
+\definecolor{gh-pr}{HTML}{2b93f4}
+\fi
+\newcommand{\GHProfile}[1][jeertmans]{\href{https://github.com/#1}{\color{gh-pr}\texttt{\faGithub{}\,#1}}}
+\newcommand{\GHRepository}[2][jeertmans]{\href{https://github.com/#1/#2}{\color{gh-pr}\texttt{\faGithub{}\,#1/#2}}}
+\newcommand{\GHIssue}[3]{\href{https://github.com/#1/#2/issues/#3}{\color{gh-pr}\texttt{\##2/#3}}}
+\newcommand{\GHPR}[3]{\href{https://github.com/#1/#2/pull/#3}{\color{gh-pr}\texttt{\##2/#3}}}
+
+\ifxetexorluatex
+\ExplSyntaxOn % See: https://tex.stackexchange.com/a/663087
+\newcommand{\bsit}[1]{
+  \str_case:nnF { #1 } {
+    {0}{\symbf{0}}
+    {1}{\symbf{1}}
+    {2}{\symbf{2}}
+    {3}{\symbf{3}}
+    {4}{\symbf{4}}
+    {5}{\symbf{5}}
+    {6}{\symbf{6}}
+    {7}{\symbf{7}}
+    {8}{\symbf{8}}
+    {9}{\symbf{9}}
+  }
+  { \symbfit{#1} }
+}
+\ExplSyntaxOff
+\newcommand{\bsup}{\symbf}
+\else
+\newcommand{\bsit}{\boldsymbol}
+\newcommand{\bsup}{\mathbf}
+\fi
+
+\newcommand{\uvec}[1]{\hat{\bsup{#1}}}
+\newcommand{\dyadic}[1]{\underline{\bsup{#1}}}
+\newcommand{\adj}[1]{\bar{#1}}
+\newcommand{\dual}[1]{\dot{#1}}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argopt}{arg\,opt}
+
+\newcommand{\inputmintedmarker}[4][]{%
+  % #1 = optional minted arguments (e.g., linenos, bgcolor)
+  % #2 = language (e.g., python)
+  % #3 = source filename
+  % #4 = marker name
+  \immediate\write18{awk '/BEGIN_#4/{flag=1; next} /END_#4/{flag=0} flag' #3 > #3.tmp}%
+  \inputminted[#1]{#2}{#3.tmp}%
+}
+
+% Ensure that floats are placed at the top of the page on empty pages
+\makeatletter
+\setlength{\@fptop}{0pt}
+\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
+
+\begin{document}
+
+%----------------------------------------------------------------------------------------
+%  BOOK INFORMATION
+%----------------------------------------------------------------------------------------
+
+\titlehead{\includegraphics[width=0.6\textwidth]{images/logo-uclouvain-icteam.pdf}}
+\subject{\normalfont\normalsize Thesis submitted in the partial fulfillment of the requirements for the degree of\\\emph{Docteur en sciences de l'ingénieur et technologie}}
+\title[Differentiable Ray Tracing for Radio Propagation Modeling]{Differentiable Ray Tracing for\\Radio Propagation Modeling}
+\author[Jérome Eertmans]{Jérome Eertmans}
+\date{July 2026}
+\publishers{%
+  \vspace*{3cm}
+  \normalsize\raggedright{}Thesis committee:\\[0.5\baselineskip]
+  Prof. Claude Oestges, \emph{advisor}\hfill Université catholique de Louvain\\
+  Prof. Laurent Jacques, \emph{advisor}\hfill Université catholique de Louvain\\
+  Prof. Christophe Craeye, \emph{chairman}\hfill Université catholique de Louvain\\
+  Prof. Christophe De Vleeschouwer, \emph{secretary}\hfill Université catholique de Louvain\\
+  Prof. Philippe De Doncker\hfill Université libre de Bruxelles\\
+  Prof. Enrico Maria Vitucci\hfill Università di Bologna, Italy\\
+  Dr. Jakob Hoydis\hfill NVIDIA Research, France
+}
+
+%----------------------------------------------------------------------------------------
+
+\frontmatter % Denotes the start of the pre-document content, uses roman numerals
+
+%----------------------------------------------------------------------------------------
+%  DEDICATION
+%----------------------------------------------------------------------------------------
+
+\dedication{
+  \enquote{Any sufficiently advanced technology is indistinguishable from magic.}\\
+  \flushright -- Arthur C. Clarke\\
+  \flushleft
+  \emph{Fortunately for us, ray tracing is far simpler than magic.}
+}
+
+%----------------------------------------------------------------------------------------
+%  OUTPUT TITLE PAGE AND PREVIOUS
+%----------------------------------------------------------------------------------------
+
+% Note that \maketitle outputs the pages before here
+\maketitle
+
+%----------------------------------------------------------------------------------------
+%  ACKNOWLEDGMENTS
+%----------------------------------------------------------------------------------------
+
+\import{chapters/}{00-acknowledgments.tex}
+
+%----------------------------------------------------------------------------------------
+%  PREFACE
+%----------------------------------------------------------------------------------------
+
+\import{chapters/}{00-preface.tex}
+
+%----------------------------------------------------------------------------------------
+%  CONTRIBUTIONS
+%----------------------------------------------------------------------------------------
+
+\import{chapters/}{00-contributions.tex}
+
+%----------------------------------------------------------------------------------------
+%  TABLE OF CONTENTS & LIST OF FIGURES/TABLES
+%----------------------------------------------------------------------------------------
+
+\begingroup % Local scope for the following commands
+
+% Define the style for the TOC, LOF, and LOT
+%\setstretch{1} % Uncomment to modify line spacing in the ToC
+%\hypersetup{linkcolor=blue} % Uncomment to set the colour of links in the ToC
+%\setlength{\textheight}{230\vscale} % Manually adjust the height of the ToC pages
+
+% Turn on compatibility mode for the etoc package
+\etocclasstocstyle % Use the class's default ToC style
+\etocstandardlines % "toc lines as if etoc was not loaded
+
+\tableofcontents % Output the table of contents
+
+\endgroup
+
+%----------------------------------------------------------------------------------------
+%  MAIN BODY
+%----------------------------------------------------------------------------------------
+
+\mainmatter % Denotes the start of the main document content, resets page numbering and uses arabic numbers
+\setchapterstyle{kao} % Choose the default chapter heading style
+
+\pagelayout{wide} % No margins
+\addpart{Understanding}
+\labpart{understanding}
+\pagelayout{margin} % Restore margins
+
+\import{chapters/}{01-propagation.tex}
+\import{chapters/}{02-rt-fundamentals.tex}
+
+\pagelayout{wide} % No margins
+\addpart{Building}
+\labpart{building}
+\pagelayout{margin} % Restore margins
+%
+\import{chapters/}{03-path-tracing.tex}
+\import{chapters/}{04-drt.tex}
+\import{chapters/}{05-efficient-path-tracing.tex}
+%
+\pagelayout{wide} % No margins
+\addpart{Using}
+\labpart{using}
+\pagelayout{margin} % Restore margins
+%
+\import{chapters/}{06-applications.tex}
+\import{chapters/}{07-research-applications.tex}
+\import{chapters/}{08-conclusion.tex}
+
+\appendix % From here onwards, chapters are numbered with letters, as is the appendix convention
+
+\pagelayout{wide} % No margins
+\addpart{Appendix}
+\pagelayout{margin} % Restore margins
+
+\import{chapters/}{XX-tutorial.tex}
+\import{chapters/}{XX-path-candidates-generation.tex}
+
+%----------------------------------------------------------------------------------------
+
+\backmatter % Denotes the end of the main document content
+\setchapterstyle{plain} % Output plain chapters from this point onwards
+
+%----------------------------------------------------------------------------------------
+%  BIBLIOGRAPHY
+%----------------------------------------------------------------------------------------
+
+% TODO: decide whether we want to use numbered citations or author-year citations throughout the document
+% TODO: check consistency of enquote (including comma or not)
+
+% The bibliography needs to be compiled with biber using your LaTeX editor, or on the command line with 'biber main' from the template directory
+
+\defbibnote{bibnote}{Here are the references in citation order.\par\bigskip} % Prepend this text to the bibliography
+\printbibliography[heading=bibintoc, title=Bibliography, prenote=bibnote] % Add the bibliography heading to the ToC, set the title of the bibliography and output the bibliography note
+
+%----------------------------------------------------------------------------------------
+%  NOMENCLATURE
+%----------------------------------------------------------------------------------------
+
+\import{./}{nomenclature.tex} % Include the nomenclature definitions
+
+\renewcommand{\nompreamble}{The following list describes several symbols that are commonly used within the body of the document.} % Prepend this text to the nomenclature
+
+\printnomenclature % Output the nomenclature
+
+%----------------------------------------------------------------------------------------
+%  GLOSSARY
+%----------------------------------------------------------------------------------------
+
+% The glossary needs to be compiled on the command line with 'makeglossaries main' from the template directory
+
+%\setglossarystyle{listgroup} % Set the style of the glossary (see https://en.wikibooks.org/wiki/LaTeX/Glossary for a reference)
+% \printglossary[title=Acronyms, toctitle=Acronyms] % Output the glossary, 'title' is the chapter heading for the glossary, toctitle is the table of contents heading
+\printglossary[type=\acronymtype, title=Acronyms, toctitle=Acronyms] % Output the acronyms glossary
+
+\printglossary[type=main, title=Glossary, toctitle=Glossary] % Output the main glossary
+
+%----------------------------------------------------------------------------------------
+%  INDEX
+%----------------------------------------------------------------------------------------
+
+% The index needs to be compiled on the command line with 'makeindex main' from the template directory
+
+\printindex % Output the index
+\pagestyle{empty}
+
+\end{document}

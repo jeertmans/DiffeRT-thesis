@@ -1,0 +1,73 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{angles}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{decorations.pathmorphing}
+% \usetikzlibrary{decorations.pathreplacing}
+% \usetikzlibrary{patterns}
+% \usetikzlibrary{quotes}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+\begin{tikzpicture}[
+    scale=0.36,
+    myangle/.style={draw, angle radius=0.55cm, angle eccentricity=1.3},
+  ]
+
+  % Parameters
+  \def\angI{30}      % Incident angle
+  \def\angR{15}      % Refracted angle
+  \def\slabW{3.2}    % Slab width
+  \def\rayLen{3}     % Length of exterior rays
+  \def\waveHalf{0.3cm} % Wavefront half-length
+
+  % Coordinates for the interfaces
+  \coordinate (O1) at (0,0);
+  \coordinate (O2) at (\slabW, {\slabW * tan(\angR)});
+
+  % Ray Endpoints
+  \coordinate (IncStart) at ({-180+\angI}:\rayLen);
+  \coordinate (RefEnd) at ({180-\angI}:\rayLen);
+  \coordinate (TransEnd) at ($(O2) + (\angI:\rayLen)$);
+
+  % Interface and Slab Hatching
+  \fill[pattern=north east lines, pattern color=gray!40] (0,-4) rectangle (\slabW, 3);
+  \draw[thick] (0,-4) -- (0,3);
+  \draw[thick] (\slabW,-4) -- (\slabW,3);
+
+  % Normals
+  \draw[dashed] (-2.5,0) -- (2.7,0);
+  \draw[dashed] (\slabW-1.5, {\slabW * tan(\angR)}) -- (\slabW+2.5, {\slabW * tan(\angR)});
+
+  % Reference points for angles
+  \coordinate (N1_left) at (-2,0);
+  \coordinate (N1_right) at (2,0);
+  \coordinate (N2_right) at (\slabW+2, {\slabW * tan(\angR)});
+
+  % Labels: Mediums and Width
+  \pgfmathsetseed{3} % For reproducible randomness
+  \fill[white] (\slabW/2, 2.5) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { circle (13pt) };
+  \node[font=\footnotesize] at (\slabW/2, 2.5) {$\epsilon_{r}$};
+  \node[font=\footnotesize] at (-1.5, -2.5) {Air};
+  \fill[white] ({\slabW/2 - 1.0}, -3.5) decorate[decoration={random steps,segment length=1mm,amplitude=1mm}] { rectangle ({\slabW/2 + 1.0},-1.5) };
+  \node[font=\footnotesize] at (\slabW/2, -2.5) {Slab};
+  \node[font=\footnotesize] at (\slabW+1.5, -2.5) {Air};
+
+  \draw[decorate, decoration={brace, amplitude=6pt}, thick]
+  (0, 3.2) -- (\slabW, 3.2) node[midway, yshift=14pt] {\footnotesize $d$};
+
+  % Draw Rays
+  \draw[thick, <-] (O1) -- (IncStart) node[pos=0.5,sloped,below,font=\footnotesize] {$\bsup{s}^i$};
+  \draw[thick, ->] (O1) -- (RefEnd) node[pos=0.5,sloped,above,font=\footnotesize] {$\bsup{s}^r$};
+  \draw[thick] (O1) -- (O2); % Internal refracted ray
+  \draw[thick, ->] (O2) -- (TransEnd) node[pos=0.5,sloped,above,font=\footnotesize] {$\bsup{s}^t$};
+
+  % Angles
+  \draw pic [draw, <-,myangle] {angle = N1_left--O1--IncStart};
+  \node[above right,yshift=+5pt,xshift=0pt,font=\footnotesize,inner sep=0pt] at (IncStart) {$\theta_i$};
+  \draw pic [draw, ->, myangle] {angle = RefEnd--O1--N1_left};
+  \node[below right,yshift=-5pt,xshift=0pt,font=\footnotesize,inner sep=0pt] at (RefEnd) {$\theta_i$};
+  \draw pic [draw, ->, angle radius=0.80cm] {angle = N1_right--O1--O2};
+  \node[font=\footnotesize,below] at ($(O1)!1.4!(N1_right)$) {$\theta_t$};
+  \draw pic [draw, ->, angle radius=.70cm] {angle = N2_right--O2--TransEnd};
+  \node[font=\footnotesize,below=2pt,inner sep=0pt] at ($(O2)!1.1!(N2_right)$) {$\theta_i$};
+
+\end{tikzpicture}

@@ -1,0 +1,18 @@
+% Requires:
+% \usepackage{amsmath}
+% INCLUDE ../images/emitting-antenna.pdf relto ../main.tex
+% INCLUDE ../images/podcast.pdf relto ../main.tex
+% INCLUDE ../images/receiving-antenna.pdf relto ../main.tex
+% INCLUDE ../images/smartphone-playing-sound.pdf relto ../main.tex
+\begin{tikzpicture}[every node/.append style={node distance=2cm}]
+  \node[label=above:{Transmitter}] (emitting) at (0, 0) {\includegraphics[width=1cm]{images/emitting-antenna.pdf}};
+  \node (channel) [right of=emitting,draw,rounded corners,inner sep=2pt] {Channel};
+  \node[label=above:{Receiver},right of=channel] (receiving) {\includegraphics[width=1cm]{images/receiving-antenna.pdf}};
+  \node[label=above:{Source},left of=emitting] (podcast) {\includegraphics[width=1cm]{images/podcast.pdf}};
+  \node[label=above:{Destination}, right of=receiving] (smartphone) {\includegraphics[width=1cm]{images/smartphone-playing-sound.pdf}};
+
+  \draw[->,thick] (podcast) -- (emitting);
+  \draw[->,thick] (emitting) -- (channel);
+  \draw[->,thick] (channel) -- (receiving);
+  \draw[->,thick] (receiving) -- (smartphone);
+\end{tikzpicture}

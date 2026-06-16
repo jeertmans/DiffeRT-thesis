@@ -1,0 +1,114 @@
+% Requires:
+% \usetikzlibrary{3d}
+% \usetikzlibrary{angles}
+% \usetikzlibrary{bending}
+% \usetikzlibrary{quotes}
+\def\xang{-13}
+\def\zang{45}
+\begin{tikzpicture}[x=(\xang:0.9), y=(90:0.9), z=(\zang:1.1)]
+  \def\xmax{6.5}         % max x axis
+  \def\ymin{-1.5}        % min y axis
+  \def\ymax{1.6}         % max y axis
+  \def\zmax{1.6}         % max z axis
+  \def\xf{1.17*\xmax}    % x position frequency axis
+  \def\A{(0.70*\ymax)}   % amplitude
+  \def\T{(0.335*\xmax)}  % period
+  \def\w{\zmax/11.2}     % spacing components
+  \def\ang{60}           % angle
+  \def\s{\ang/360*\T}    % time component
+  \def\x{\A*cos(\ang)}   % real component
+  \def\y{\A*sin(\ang)}   % imaginary component
+
+  \tikzstyle{vector}=[->,very thick,black!50]
+  \tikzstyle{xline}=[blue,thick,densely dashed]
+  \tikzstyle{yzp}=[canvas is zy plane at x=0]
+  \tikzstyle{xzp}=[canvas is xz plane at y=0]
+  \tikzstyle{xyp}=[canvas is xy plane at z=0]
+  \def\tick#1#2{\draw[thick] (#1) ++ (#2:0.12) --++ (#2-180:0.24)}
+  \def\N{100}
+
+  % Polarisation Plane
+  \begin{scope}[shift={(-1.6*\zmax,0,0)}]
+    \draw[black,fill=white,opacity=0.3,yzp]
+    (-1.25*\zmax,-1.25*\ymax) rectangle (1.4*\zmax,1.25*\ymax);
+    \draw[->,thick] (0,\ymin,0) -- (0,\ymax+0.02,0)
+    node[right,yzp] {$y$};
+    \draw[->,thick] (0,0,-\zmax) -- (0,0,\zmax+0.02)
+    node[right,yzp] {$x$} coordinate (X);
+    \draw[xline,yzp] (0,0) circle(0.991*\A) coordinate (O);
+    \fill[red,yzp] (\ang:{\A}) circle(0.07) coordinate(P);
+    \node[blue,above right,yzp,scale=0.8] at (P) {$\mathbf{E}(t, z_0)$};
+    \draw[vector,thick,yzp] (0,0) -- (\ang:{\A-0.03}) coordinate (R);
+    \draw pic[-{>[flex'=1]},draw,angle radius=14,angle eccentricity=1,
+    "$kz_0$"{above=0.1,right,yslant=0.69,scale=.7},yzp]
+    {angle = X--O--R};
+    \tick{0,0,{\A}}{90};
+    \tick{0,0,{-\A}}{90};
+    \tick{0,{\A},0}{\zang};
+    \tick{0,{-\A},0}{\zang};
+  \end{scope}
+
+  % E_y Field
+  \begin{scope}[shift={(0,0,1.9*\zmax)}]
+    \draw[black,fill=white,opacity=0.3,xyp]
+    (-0.5*\ymax,-1.2*\ymax) rectangle (1.10*\xmax,1.25*\ymax);
+    \draw[->,thick] (-0.3*\ymax,0,0) -- (\xmax,0,0)
+    node[right,xyp] {$z$};
+    \draw[->,thick] (0,\ymin,0) -- (0,\ymax,0)
+    node[left,xyp] {$y$};
+    \draw[xline,samples=\N,smooth,variable=\t,domain=-0.05*\T:0.95*\xmax]
+    plot(\t,{\A*sin(360/\T*\t)},0);
+    \fill[red,xyp] ({\s},{\y}) circle(0.07) coordinate(I);
+    \draw[vector,thick,xyp] ({\s},0) --++ (0,{\y-0.03});
+    \tick{0,{\A},0}{180};
+    \tick{0,{-\A},0}{180};
+    \tick{{\s},0,0}{90} node[below,xyp] {$kz_0$};
+    \tick{{\T},0,0}{90} node[below,xyp] {$\lambda$};
+    \tick{{2*\T},0,0}{90} node[below,xyp] {$2\lambda$};
+    \node[blue,xyp] at (0.4*\xmax,1.05*\ymax,0) {$E_y(t, z)=E_0\sin(\omega t-k z)$};
+  \end{scope}
+
+  % E_x Field
+  \begin{scope}[shift={(0,-1.8*\zmax,0)}]
+    \draw[black,fill=white,opacity=0.3,xzp]
+    (-0.5*\ymax,-1.4*\ymax) rectangle (1.10*\xmax,1.25*\ymax);
+    \draw[->,thick] (-0.3*\ymax,0,0) -- (\xmax,0,0)
+    node[right,xzp] {$z$};
+    \draw[->,thick] (0,0,-\zmax) -- (0,0,\zmax)
+    node[right,xzp] {$x$};
+    \draw[xline,samples=\N,smooth,variable=\t,domain=-0.05*\T:0.95*\xmax]
+    plot(\t,0,{\A*cos(360/\T*\t)});
+    \fill[red,xzp] ({\s},{\x}) circle(0.07) coordinate(R);
+    \draw[vector,thick,xzp] ({\s},0) --++ (0,{\x-0.03});
+    \tick{0,0,{\A}}{180};
+    \tick{0,0,{-\A}}{180};
+    \tick{{\s},0,0}{\zang} node[below,xzp] {$kz_0$};
+    \tick{{\T},0,0}{\zang} node[below,xzp] {$\lambda$};
+    \tick{{2*\T},0,0}{\zang} node[below,xzp] {$2\lambda$};
+    \node[blue,above=0,xzp] at (0.3*\xmax,-\ymax,0) {$E_x(t, z)=E_0\cos(\omega t-k z)$};
+  \end{scope}
+
+  % Components
+  \draw[red,thick,dashed]
+  (P) -- ({\s},{\y},{\x})
+  (I) -- ({\s},{\y},{\x+0.05})
+  ({\s},{\y-0.06},{\x}) -- (R);
+  \draw[->,black,thick] (-0.1*\ymax,0,0) -- (\xmax,0,0) node[below right] {$z$};
+  \draw[->,black,thick] (0,\ymin,0,0) -- (0,\ymax+0.02,0) node[above] {$y$};
+  \draw[->,black,thick] (0,0,-\zmax) -- (0,0,\zmax+0.02) node[above right] {$x$};
+  \foreach \i [evaluate={\tmin=max(-0.05*\T,(\i-0.05)*\T); \tmax=min(0.95*\xmax,(\i+1)*\T);}] in {0,...,2}{
+    \draw[thick] (\tmin,0,0) -- (\tmax,0,0);
+    \draw[xline,solid,samples=0.4*\N,smooth,variable=\t]
+    plot[domain=\tmin:\tmax](\t,{\A*sin(360/\T*\t)},{\A*cos(360/\T*\t)});
+  }
+  \draw[thick] (0,0,{0.9*\A}) -- (0,0,{\A});
+  \fill[red] ({\s},{\y},{\x}) circle(0.07) coordinate(Z);
+  \draw[vector,thick] ({\s},0,0) --++ (0,{\y-0.03},{\x-0.03});
+  \tick{{\T},0,0}{90};
+  \tick{{2*\T},0,0}{90};
+  \tick{0,0,{\A}}{90};
+  \tick{0,0,{-\A}}{90};
+  \tick{0,{\A},0}{\zang};
+  \tick{0,{-\A},0}{\zang};
+
+\end{tikzpicture}

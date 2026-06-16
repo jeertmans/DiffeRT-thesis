@@ -1,0 +1,56 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{intersections}
+% \usetikzlibrary{patterns.meta}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\glsxtrshort}[1]{#1}
+% \providecommand{\Glsxtrlong}[1]{#1}
+\begin{tikzpicture}[
+    scale=0.75,
+    ray/.style={->,thick,draw=green!80!black,opacity=0.75},
+    invalid ray/.style={ray,dashed},
+    wall/.style={draw=red, thick},
+    point/.style={draw,cross out,thick,inner sep=2pt},
+    ground/.style={fill,draw=none,minimum width=0.3,minimum height=0.6},
+    intersection-point/.style={draw=blue,fill=white,fill opacity=0.5,circle,thick,inner sep=2pt},
+    previous-intersection-point/.style={intersection-point,draw=blue!50!white,opacity=#1}
+  ]
+  % Macro to draw the static background elements (walls, ground, tx, rx)
+  \def\drawbackground{
+    % Wall 1 (Angled)
+    \draw[ground,pattern={Lines[angle=0]},rotate around={45:(0,0)}] (0,0) rectangle ({3.5/cos(45)}, .1);
+    \draw[wall] (0,0) -- (3.5, 3.5);
+
+    % Wall 2 (Vertical)
+    \draw[ground,pattern={Lines[angle=45]}] (5,.5) rectangle (5.1, 4);
+    \draw[wall] (5,.5) -- (5, 4);
+
+    % Tx and Rx points
+    \node[point,label=below:{Transmitter}] (BS) at (2,-1) {};
+    \node[point,label=above:{Receiver}] (UE) at (2,4) {};
+  }
+
+  % ---------------------------------------------------------
+  % Iteration 2: C = 0.92
+  % ---------------------------------------------------------
+  \drawbackground
+
+  % Previous Specular Points
+  \node[previous-intersection-point=0.75] (PS1) at (1.5, 1.5) {};
+  \node[previous-intersection-point=0.75] (PS2) at (5, 2.0) {};
+
+  % Approximate Specular Points
+  \coordinate (S1) at (2.0, 2.0);
+  \coordinate (S2) at (5, 2.5);
+
+  % Ray
+  \draw[invalid ray] (BS) -- (S1) -- (S2) -- (UE);
+
+  % Intersection Points
+  \node[intersection-point] at (S1) {};
+  \node[intersection-point] at (S2) {};
+
+  % Cost Label
+  \node[anchor=west] at (5.5, 2.5) {$C = 0.92$};
+\end{tikzpicture}

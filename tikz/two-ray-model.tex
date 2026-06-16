@@ -1,0 +1,60 @@
+% Requires:
+% \usetikzlibrary{angles}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{patterns}
+% \usetikzlibrary{quotes}
+% \usetikzlibrary{shapes.misc}
+\begin{tikzpicture}
+
+  % Define Variables for Easy Adjustment
+  \def\hTx{4}      % Transmitter height
+  \def\hRx{1.5}    % Receiver height
+  \def\dist{6.}   % Horizontal distance (d)
+
+  % Coordinates
+  \coordinate (O) at (0,0);
+  \coordinate (Tx) at (0,\hTx);
+  \coordinate (Rx) at (\dist,\hRx);
+  \coordinate (RxImg) at (\dist,-\hRx);
+  \coordinate (y_d) at (0, -0.8);
+  \coordinate (x_ht) at (-0.5, 0);
+  \coordinate (x_hr) at (\dist + 0.5, 0);
+  \coordinate (x_sum) at (\dist + 1.0, 0);
+  \coordinate (G_Left) at (-0.75,0);
+  \coordinate (G_Right) at (\dist + 1.25,0);
+  \coordinate (R) at ({\dist * \hTx / (\hTx + \hRx)}, 0);
+
+  % Dashed Lines
+  \draw[dashed, thick, opacity=0.5] (x_ht |- Tx) -- (x_sum |- Tx);
+  \draw[dashed, thick, opacity=0.5] (Rx) -- (RxImg);
+  \draw[thick,dashed,opacity=0.5] (Tx) -- (Tx |- y_d);
+  \draw[dashed, thick, opacity=0.5] (Rx) -- (x_hr |- Rx);
+  \draw[dashed, thick, opacity=0.5] (RxImg) -- (x_sum |- RxImg);
+  \draw[dashed, draw opacity=0.75] (R) -- (RxImg);
+
+  % Ground Plane
+  \draw[ultra thick, black] (G_Left) -- (G_Right) node[pos=.3, above] {Ground plane};
+  \fill[pattern=north east lines] (G_Left) rectangle ([yshift=-.2cm]G_Right);
+
+  % Ray Paths
+  \draw[thick,->] (Tx) -- (Rx) node[midway, above, sloped, font=\footnotesize] {$d'$};
+  \draw[thick] (Tx) -- (R) node[midway, above, sloped, font=\footnotesize] {$d_1$};
+  \draw[thick,->] (R) -- (Rx) node[midway, above, sloped, font=\footnotesize] {$d_2$};
+
+  % Nodes
+  \node[cross out, draw, inner sep=2pt, thick,label={[above,name=tx-label]Transmitter}] at (Tx) {};
+  \path (x_ht) -- ([yshift=0.2cm]tx-label.north);
+  \pgfmathsetmacro{\angle}{-atan(\dist/(\hTx-\hRx)/\dist)}
+  \node[cross out, draw, inner sep=2pt, thick,label={[anchor=south east,rotate=\angle]Receiver}] at (Rx) {};
+  \node[cross out, draw, inner sep=2pt, thick] at (RxImg) {};
+
+  % Dimension Labels
+  \draw[|<->|] (Tx |- y_d) -- (Rx |- y_d) node[midway, fill=white,font=\footnotesize] {$d$};
+  \draw[|<->|] (x_hr |- 0,0) -- (x_hr |- 0,\hRx) node[midway, fill=white,rotate=-90,font=\footnotesize] {$h_r$};
+  \draw[|<->|] (x_hr |- 0,0) -- (x_hr |- 0,-\hRx) node[midway, fill=white,rotate=-90,font=\footnotesize] {$h_r$};
+  \draw[|<->|] (x_hr |- 0,\hRx) -- (x_hr |- 0,\hTx) node[midway, fill=white,rotate=-90,font=\footnotesize] {$h_t - h_r$};
+  \draw[|<->|] (x_sum |- 0,\hTx) -- (x_sum |- 0,-\hRx) node[midway, fill=white, rotate=270,font=\footnotesize] {$h_t + h_r$};
+
+  \draw pic[draw, <-, "$\alpha$", angle radius=0.8cm, angle eccentricity=1.3] {angle = Tx--R--G_Left};
+  \draw pic[draw, ->, "$\alpha$", angle radius=0.8cm, angle eccentricity=1.3] {angle = G_Right--R--Rx};;
+\end{tikzpicture}

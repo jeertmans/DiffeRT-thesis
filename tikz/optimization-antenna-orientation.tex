@@ -1,0 +1,62 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{siunitx}
+% \usepgfplotslibrary{groupplots}
+% INCLUDE ../data/transmitter-orientation-optimization.txt relto ../main.tex
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={
+        group size=2 by 2,
+        horizontal sep=1.4cm,
+        vertical sep=1.4cm,
+      },
+      width=4.2cm,
+      xlabel={Optimization step},
+      ylabel style={yshift=-4pt},
+      scaled x ticks=false,
+      xtick={0,5000,10000},
+      xticklabels={0,5k,10k},
+      grid=major,
+      ymajorgrids=true,
+      xmajorgrids=true,
+    ]
+    \nextgroupplot[
+      ylabel={Path gain (\unit{\decibel})},
+      title={\shortstack{Power\\convergence}},
+      xlabel=\empty,
+      xticklabel=\empty,
+      ylabel style={yshift=8pt},
+      yticklabel style={
+        /pgf/number format/fixed,
+        /pgf/number format/fixed zerofill,
+        /pgf/number format/precision=2,
+      },
+    ]
+    \addplot[thick, color=red,each nth point=100, filter discard warning=false, unbounded coords=discard]
+    table[x=step, y=power_db, col sep=comma] {data/transmitter-orientation-optimization.txt};
+
+    \nextgroupplot[
+      ylabel={Angle (\unit{\degree})},
+      title={\shortstack{Orientation\\(roll)}},
+      xlabel=\empty,
+      xticklabel=\empty,
+    ]
+    \addplot[thick, color=blue,each nth point=100, filter discard warning=false, unbounded coords=discard]
+    table[x=step, y=alpha_deg, col sep=comma] {data/transmitter-orientation-optimization.txt};
+
+    \nextgroupplot[
+      ylabel={Angle (\unit{\degree})},
+      title={\shortstack{Orientation\\(pitch)}},
+      ylabel style={yshift=8pt},
+    ]
+    \addplot[thick, color=blue,each nth point=100, filter discard warning=false, unbounded coords=discard]
+    table[x=step, y=beta_deg, col sep=comma] {data/transmitter-orientation-optimization.txt};
+
+    \nextgroupplot[
+      ylabel={Angle (\unit{\degree})},
+      title={\shortstack{Orientation\\(yaw)}},
+    ]
+    \addplot[thick, color=blue,each nth point=100, filter discard warning=false, unbounded coords=discard]
+    table[x=step, y=gamma_deg, col sep=comma] {data/transmitter-orientation-optimization.txt};
+  \end{groupplot}
+\end{tikzpicture}

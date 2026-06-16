@@ -1,0 +1,124 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{tikz-3dplot}
+% \usetikzlibrary{3d}
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{decorations.pathmorphing}
+% \usetikzlibrary{patterns}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\hat{\mathbf{#1}}}
+\tdplotsetmaincoords{45}{0}
+\begin{tikzpicture}[tdplot_main_coords, >=latex, line join=round, line cap=round,scale=1.27]
+
+  % 3D Surface Backings
+  \fill[white]
+  (0,0,0)
+  % Front o-face (z=0)
+  .. controls (-1.5, 0.9, 0) and (-2.5, 1.3, 0) .. (-3, 1.2, 0)
+  % Top outer sweep curve (z=0 to z=4), adjusted to match the convex crack front
+  .. controls (-2.2, 0.8, 1.33) and (-1.4, 0.6, 2.66) .. (-1.5, 0.7, 4)
+  % Back o-face
+  .. controls (-1.0, 0.8, 4) and (0, 0.4, 4) .. (1.5, -0.5, 4)
+  % Edge sweep curve (crack front) back to origin (reversed path, explicitly convex)
+  .. controls (1.5, -0.6, 2.66) and (1.0, -0.4, 1.33) .. (0,0,0) coordinate[pos=.5] (mid_front);
+
+  % Front 2D Cross Section at z=0
+  \begin{scope}[canvas is xy plane at z=0]
+    \pgfmathsetseed{3} % For reproducible randomness
+    \fill[pattern=north east lines,draw,thick]
+    (0,0)
+    % o-face (convex)
+    .. controls (-1.5, 0.9) and (-2.5, 1.3) .. (-3, 1.2) node[pos=.9, above right] {$0$-face}
+    % Back edge (now prominently convex, bulging outwards to x=-3.4)
+    decorate[decoration={random steps,segment length=2mm,amplitude=1mm}] { -- (-3, -1.2) }
+    % n-face (convex)
+    .. controls (-2.5, -1.3) and (-1.5, -0.9) .. (0,0) node[pos=.25, below] {$n$-face};
+  \end{scope}
+
+  % 3D Surface Boundaries
+  % Top outer edge sweep (following convex shift)
+  \pgfmathsetseed{3} % For reproducible randomness
+  \draw[thick] (-3, 1.2, 0) decorate[decoration={random steps,segment length=2mm,amplitude=1mm}] { -- (-1.5, 0.7, 4) coordinate[pos=.5] (mid_back)};
+
+  % Far back o-face curve
+  \draw[thick] (1.5, -0.5, 4) .. controls (0, 0.4, 4) and (-1.0, 0.8, 4) .. (-1.5, 0.7, 4);
+
+  % The Crack Front (Diffraction Edge)
+  \draw[thick] (0,0,0) -- (1.5, -0.5, 4) coordinate (edge_end) coordinate[midway] (Qe);
+
+  \draw[->,thick] (Qe) -- (edge_end) node[above] {$\uvec{e}$};
+
+  % ==========================================
+  % AUTOMATIC CONE COMPUTATION (Keller's Law)
+  % ==========================================
+
+  % 1. Get Edge Vector E = (1.5, -0.5, 4)
+  \pgfmathsetmacro{\Ex}{1.5}
+  \pgfmathsetmacro{\Ey}{-0.5}
+  \pgfmathsetmacro{\Ez}{4}
+  \pgfmathsetmacro{\Elen}{sqrt(\Ex*\Ex + \Ey*\Ey + \Ez*\Ez)}
+
+  % 2. Calculate rotation angles to align local z' axis with the edge vector E
+  \pgfmathsetmacro{\Etheta}{acos(\Ez/\Elen)}
+  \pgfmathsetmacro{\Ephi}{atan2(\Ey,\Ex)}
+
+  % 3. Get Incident Vector I (from Tx to Qe)
+  \pgfmathsetmacro{\mulFactor}{0.3}
+  \pgfmathsetmacro{\Ix}{\mulFactor*\Ex + 0.2}
+  \pgfmathsetmacro{\Iy}{\mulFactor*\Ey - 0.6}
+  \pgfmathsetmacro{\Iz}{\mulFactor*\Ez}
+  \pgfmathsetmacro{\Ilen}{sqrt(\Ix*\Ix + \Iy*\Iy + \Iz*\Iz)}
+
+  % Define Incident Ray Source
+  \path (Qe) -- ++({-\Ix},{-\Iy},{-\Iz}) node[cross out,draw,thick,inner sep=2pt] (Tx) {};
+  \node[anchor=east,xshift=-1mm,yshift=1pt] at (Tx) {Source};
+  \draw[->,thick] (Tx) -- (Qe) node[midway,sloped,above] {$\bsup{s}^i$};
+
+  % 4. Compute Keller's cone angle parameter (cos(beta_0))
+  % We use abs() to force the cone to point "forward" along the edge,
+  % matching the visual style of the textbook despite the ray's downward tilt.
+  \pgfmathsetmacro{\cosbeta}{abs((\Ix*\Ex + \Iy*\Ey + \Iz*\Ez)/(\Ilen*\Elen))}
+  \pgfmathsetmacro{\sinbeta}{sqrt(1 - \cosbeta*\cosbeta)}
+
+  % 5. Set Cone Size for Visualization
+  \pgfmathsetmacro{\Rcone}{2.5} % Ray length drawn for the cone visual
+  \pgfmathsetmacro{\conez}{\Rcone * \cosbeta}
+  \pgfmathsetmacro{\coner}{\Rcone * \sinbeta}
+
+  % ==========================================
+  % DRAWING THE DIFFRACTION CONE
+  % ==========================================
+
+  % Set rotated coordinate system at Qe pointing along the edge
+  \tdplotsetrotatedcoords{\Ephi}{\Etheta}{0}
+  \tdplotsetrotatedcoordsorigin{(Qe)}
+
+  \begin{scope}[tdplot_rotated_coords]
+
+    % Draw the cone base as a 36-sided polygon to simulate a smooth 3D circle
+    \draw[thick, gray, dashed]
+    plot[domain=-93:210, samples=37]
+    ({ \coner*cos(\x) }, { \coner*sin(\x) }, \conez);
+
+    % Draw the cone generatrices (diffracted rays)
+    \foreach \ang in {-90, -60, ..., 210} {
+      \draw[->, thin, gray] (0,0,0) -- ({ \coner*cos(\ang) }, { \coner*sin(\ang) }, \conez);
+    }
+
+    % Compute position P on the cone with exact unit radius (|s^d| = 1)
+    \pgfmathsetmacro{\Pang}{30} % Adjusted angle to put P nicely on the top-right of the forward cone
+    \pgfmathsetmacro{\Px}{3 * \sinbeta * cos(\Pang)}
+    \pgfmathsetmacro{\Py}{3 * \sinbeta * sin(\Pang)}
+    \pgfmathsetmacro{\Pz}{3 * \cosbeta}
+
+    \node[cross out,draw,thick,inner sep=2pt] (P) at (\Px, \Py, \Pz) {};
+
+    % Draw the specific observation ray s^d
+    \draw[->,thick] (0,0,0) -- (P) node[pos=.6,sloped,below] {$\bsup{s}^d$};
+    \node[above right] at (P) {$\bsup{P}$};
+
+  \end{scope}
+
+\end{tikzpicture}

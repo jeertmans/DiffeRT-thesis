@@ -1,0 +1,67 @@
+\chapter{Conclusion and Perspectives}\labch{conclusion}
+
+Throughout this book, we have moved from the physics of electromagnetic waves to practical methods for simulating radio propagation in complex environments. The primary objective was to connect electromagnetic theory, numerical modeling, and optimization tools within a single framework.
+
+In this final chapter, we summarize the main ideas, clarify what remains outside the scope, discuss current limitations, and highlight future research directions.
+
+\section{Summary of What We Have Seen}
+
+The central message of this book is that radio propagation can be modeled accurately enough for many engineering tasks by combining high-frequency electromagnetic approximations with efficient geometric algorithms.
+
+\subsection{What This Book Covered}
+
+At the physical level, we began with Maxwell's equations and introduced the assumptions leading to high-frequency methods. In this regime, \glsxtrfull{go} and \glsxtrfull{utd} provide the primary tools for modeling reflection, transmission, and diffraction in large-scale scenes.
+
+At the algorithmic level, we studied how to find valid propagation paths in environments containing numerous objects and potential interactions. This is a challenging combinatorial problem, with a complexity that grows rapidly with the number of surfaces and the interaction order. We discussed several approaches, including the image method, \glsxtrfull{mpt}, and variational methods based on Fermat's principle.
+
+Finally, we transitioned from forward simulation to inverse design using differentiable ray tracing. By computing both channel values and their gradients, we can optimize geometry, material parameters, and transceiver settings using gradient-based methods.
+
+\subsection{What We Did Not Cover}
+
+Even with robust models such as \gls{go} and \gls{utd}, real environments remain more complex than our usual assumptions suggest. In practice, many scenes cannot be reduced to smooth polygonal surfaces without losing important physical effects.
+
+Advanced scattering and facade details represent one important example. Specular reflection is a good approximation only when surface roughness is small compared to the \gls{wavelength}. At millimeter-wave and sub-terahertz frequencies, this condition is often violated, and diffuse scattering becomes increasingly important. Real facades also feature windows, balconies, and recesses that can significantly affect propagation. These details can create directional reflections and interference patterns that are not captured by simple flat-wall models. Better scattering models are needed to represent these effects without making simulations prohibitively expensive.
+
+Another major gap concerns point clouds versus meshes. LiDAR and photogrammetry pipelines naturally produce large point clouds, while most ray tracers expect triangular meshes. Converting point clouds to clean meshes is computationally expensive and can eliminate sharp edges critical for diffraction. Direct ray tracing on point clouds is possible, but it remains an active research topic, particularly for large outdoor scenes.
+
+Vegetation modeling was also only touched upon indirectly. Trees and shrubs possess complex geometries, and their leaves and branches often have dimensions comparable to the \gls{wavelength} at high frequencies. As a result, foliage behaves like a volumetric scattering medium rather than a collection of simple surfaces. Wind also renders the channel time-varying, producing significant amplitude and phase fluctuations.
+
+\section{Limitations and Future Directions}
+
+Before closing, it is important to acknowledge that the methods presented in this book possess practical limitations. Many open problems and active research directions remain in radio propagation modeling, including several directly related to the work presented here.
+
+\subsection{Open Problems}
+
+A key practical limitation lies not only in \emph{how precise} a solver is in theory, but also in \emph{how reliable} the input data are in practice. Research often pushes ray tracing toward more complete physical models. Examples include \glshyph{near field} effects for large arrays, additional diffraction mechanisms, and interactions with \glsxtrfull{ris}. While these extensions are valuable and scientifically significant, they also increase computational cost and implementation complexity.
+
+In real deployments, however, geometric and material discrepancies often dominate the error budget. Small errors in building positions can move reflection points significantly, and uncertain material parameters can alter the predicted overall channel gain by several decibels. Such uncertainties can outweigh the benefits of extremely high-order asymptotic corrections.
+
+This leads to a core open problem: how to align model complexity with input-data quality. When geometry and materials are uncertain, extremely high interaction orders may offer little practical benefit. In many industrial workflows, resources are better spent on calibration, robust parameter estimation, and higher-quality environmental data than on increasingly complex high-order models.
+
+\subsection{Future Research Directions}
+
+Hardware acceleration is already changing what is practical in ray tracing. Modern \glsxtrfullpl{gpu} render large-scale simulations much faster than before and reshape algorithmic priorities.
+
+Modern \glspl{gpu} offer massive parallelism and dedicated ray-intersection hardware. At the same time, \glsxtrfull{jit}-compiled frameworks such as JAX, PyTorch, and TensorFlow make this hardware more accessible from high-level programming environments. This combination enables highly accelerated simulations for scenes that were previously too expensive to evaluate regularly.
+
+These performance gains also prompt a reassessment of dynamic ray tracing methods. Many classic dynamic techniques were designed to avoid recomputing paths from scratch. On \glspl{gpu}, however, regular and massively parallel workloads are often more efficient than complex stateful updates with branch-heavy logic. In certain regimes, full recomputation may therefore prove both simpler and faster.
+
+While machine learning surrogates are promising, completely replacing physics-based ray tracing remains challenging. Radio channels are highly sensitive to position and frequency, and even small displacements or frequency shifts can produce large fading variations. Consequently, purely data-driven models may struggle to generalize across scenes and frequency bands. A more pragmatic approach is therefore to combine learned components with physics-based solvers, rather than treating them as mutually exclusive alternatives.
+
+Ultimately, the primary opportunity lies in pairing robust physical models with modern hardware and differentiable optimization.
+
+\section{Closing Remarks}
+
+In conclusion, practical radio propagation modeling requires both physical rigor and engineering pragmatism. High-frequency asymptotic models, efficient path solvers, and differentiable optimization now form a coherent toolbox for many tasks, provided that we remain explicit about the uncertainties in geometry, materials, and measurements.
+
+Progress in this field will likely stem from higher-quality data, improved calibration, and closer integration of physics-based and learning-based components, rather than from isolated advancements in a single layer of the pipeline.
+
+\section*{Further Readings}
+\addcontentsline{toc}{section}{Further Readings}
+
+To supplement the material covered in this book, readers are encouraged to explore the following resources:
+\begin{itemize}
+  \item \emph{Antennas and Propagation for Wireless Communication Systems} by \textcite{Saunders2024}, for a comprehensive introduction to the physics of radio propagation and antenna theory.
+  \item \emph{Introduction to the Uniform Geometrical Theory of Diffraction} by \textcite{McNamara1990}, for everything one needs to know about \gls{go} and \gls{utd}.
+  \item \emph{Sionna~RT: Technical Report} by \textcite{Aoudia2025}, for a shorter, practical introduction to ray tracing for radio propagation modeling.
+\end{itemize}

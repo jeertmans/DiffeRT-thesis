@@ -1,0 +1,62 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{fit}
+\begin{tikzpicture}
+  [level distance=18mm,
+    every node/.style={font=\bfseries, opacity=0.5},
+    edge from parent/.style={draw, ->, thick, opacity=0.5},
+    level 1/.style={sibling distance=30mm},
+  level 2/.style={sibling distance=20mm}]
+  \makeatletter
+  \tikzset{
+    fitting node/.style={
+      inner sep=0pt,
+      fill=none,
+      draw=none,
+      reset transform,
+      fit={(\pgf@pathminx,\pgf@pathminy) (\pgf@pathmaxx,\pgf@pathmaxy)}
+    },
+    reset transform/.code={\pgftransformreset}
+  }
+  \makeatother
+
+  \pgfdeclarelayer{background}
+  \pgfsetlayers{background,main}
+  \node[opacity=1] (k0) {$\left[-1, -1\right]$}
+  child {node[opacity=1] (k11) {$\left[I_1, -1\right]$}
+    child {node (k21) {$\left[I_1, I_2\right]$}
+      edge from parent
+    }
+    child {node {...}
+      edge from parent
+    }
+    child { node[opacity=1] {$\left[I_1, I_N\right]$}
+      edge from parent[opacity=1]
+    }
+    edge from parent[opacity=1]
+  }
+  child {node {...}
+    edge from parent
+  }
+  child {node (k1n) {$\left[I_N, - 1\right]$}
+    child {node {$\left[I_N, I_1\right]$}
+      edge from parent
+    }
+    child {node {...}
+      edge from parent
+    }
+    child {node (k2n) {$\left[I_N, I_{N-1}\right]$}
+      edge from parent
+    }
+    edge from parent
+  };
+  \begin{pgfonlayer}{background}
+    \draw[rounded corners,thick,dashed,fill=gray!10] ([shift={(-.2,-.5)}]k0.west) rectangle ([shift={(.2,.5)}]k0.east) node[fitting node] (l0) {};
+    \draw[rounded corners,thick,dashed,fill=gray!10] ([shift={(-.2,-.5)}]k11.west) rectangle ([shift={(.2,.5)}]k1n.east) node[fitting node] (l1) {};
+    \draw[rounded corners,thick,dashed,fill=gray!10] ([shift={(-.2,-.5)}]k21.west) rectangle ([shift={(.2,.5)}]k2n.east) node[fitting node] (l2) {};
+    \draw[dashed, opacity=1, thick] (l0.east) -- ++(+.5,0) node[anchor=west, opacity=1] {$K=0$};
+    \draw[dashed, opacity=1, thick] (l1.west) -- ++(-.5,0) node[anchor=east, opacity=1] {$K=1$};
+    \path (l2.north) -- (l2.north -| l2.east) node[pos=.9] (l2ne) {};
+    \draw[dashed, opacity=1, thick] (l2ne.center) -- ++(0,.5) node[anchor=south, opacity=1] {$K=2$};
+  \end{pgfonlayer}
+\end{tikzpicture}

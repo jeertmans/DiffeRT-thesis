@@ -1,0 +1,153 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{tikz-3dplot}
+% \usetikzlibrary{3d}
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{decorations.pathmorphing}
+% \usetikzlibrary{patterns}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\hat{\mathbf{#1}}}
+\tdplotsetmaincoords{45}{0}
+\begin{tikzpicture}[tdplot_main_coords, >=latex, line join=round, line cap=round,scale=1.27]
+
+  % 3D Surface Backings
+  \fill[white]
+  (0,0,0)
+  % Front o-face (z=0)
+  .. controls (-1.5, 0.9, 0) and (-2.5, 1.3, 0) .. (-3, 1.2, 0)
+  % Top outer sweep curve (z=0 to z=4), adjusted to match the convex crack front
+  .. controls (-2.2, 0.8, 1.33) and (-1.4, 0.6, 2.66) .. (-1.5, 0.7, 4)
+  % Back o-face
+  .. controls (-1.0, 0.8, 4) and (0, 0.4, 4) .. (1.5, -0.5, 4)
+  % Edge sweep curve (crack front) back to origin (reversed path, explicitly convex)
+  .. controls (1.5, -0.6, 2.66) and (1.0, -0.4, 1.33) .. (0,0,0) coordinate[pos=.5] (mid_front);
+
+  % Front 2D Cross Section at z=0
+  \begin{scope}[canvas is xy plane at z=0]
+    \pgfmathsetseed{3} % For reproducible randomness
+    \fill[pattern=north east lines,draw,thick]
+    (0,0)
+    % o-face (convex)
+    .. controls (-1.5, 0.9) and (-2.5, 1.3) .. (-3, 1.2) node[pos=.9, above right] {$0$-face}
+    % Back edge (now prominently convex, bulging outwards to x=-3.4)
+    decorate[decoration={random steps,segment length=2mm,amplitude=1mm}] { -- (-3, -1.2) }
+    % n-face (convex)
+    .. controls (-2.5, -1.3) and (-1.5, -0.9) .. (0,0) node[pos=.25, below] {$n$-face};
+  \end{scope}
+
+  % 3D Surface Boundaries
+  % Top outer edge sweep (following convex shift)
+  \pgfmathsetseed{3} % For reproducible randomness
+  \draw[thick] (-3, 1.2, 0) decorate[decoration={random steps,segment length=2mm,amplitude=1mm}] { -- (-1.5, 0.7, 4) coordinate[pos=.5] (mid_back)};
+
+  % Far back o-face curve
+  \draw[thick] (1.5, -0.5, 4) .. controls (0, 0.4, 4) and (-1.0, 0.8, 4) .. (-1.5, 0.7, 4);
+
+  % The Crack Front (Diffraction Edge)
+  \draw[thick] (0,0,0) -- (1.5, -0.5, 4) coordinate (edge_end) coordinate[midway] (Qe);
+
+  \draw[->,thick] (Qe) -- (edge_end) node[above] {$\uvec{e}$};
+
+  % ==========================================
+  % AUTOMATIC CONE COMPUTATION (Keller's Law)
+  % ==========================================
+
+  % 1. Get Edge Vector E = (1.5, -0.5, 4)
+  \pgfmathsetmacro{\Ex}{1.5}
+  \pgfmathsetmacro{\Ey}{-0.5}
+  \pgfmathsetmacro{\Ez}{4}
+  \pgfmathsetmacro{\Elen}{sqrt(\Ex*\Ex + \Ey*\Ey + \Ez*\Ez)}
+
+  % 2. Calculate rotation angles to align local z' axis with the edge vector E
+  \pgfmathsetmacro{\Etheta}{acos(\Ez/\Elen)}
+  \pgfmathsetmacro{\Ephi}{atan2(\Ey,\Ex)}
+
+  % 3. Get Incident Vector I (from Tx to Qe)
+  \pgfmathsetmacro{\mulFactor}{0.3}
+  \pgfmathsetmacro{\Ix}{\mulFactor*\Ex + 0.2}
+  \pgfmathsetmacro{\Iy}{\mulFactor*\Ey - 0.6}
+  \pgfmathsetmacro{\Iz}{\mulFactor*\Ez}
+  \pgfmathsetmacro{\Ilen}{sqrt(\Ix*\Ix + \Iy*\Iy + \Iz*\Iz)}
+
+  % ==========================================
+  % INCIDENT PLANE & COORDINATE SYSTEM
+  % ==========================================
+
+  % Calculate unit vectors for \hat{e} and \hat{s}^i
+  \pgfmathsetmacro{\ex}{\Ex/\Elen}
+  \pgfmathsetmacro{\ey}{\Ey/\Elen}
+  \pgfmathsetmacro{\ez}{\Ez/\Elen}
+  \pgfmathsetmacro{\six}{\Ix/\Ilen}
+  \pgfmathsetmacro{\siy}{\Iy/\Ilen}
+  \pgfmathsetmacro{\siz}{\Iz/\Ilen}
+
+  % Compute \uvec{\phi}^i = (-\uvec{e} x \uvec{s}^i) / |\uvec{e} x \uvec{s}^i|
+  \pgfmathsetmacro{\phiixRaw}{-(\ey*\siz - \ez*\siy)}
+  \pgfmathsetmacro{\phiiyRaw}{-(\ez*\six - \ex*\siz)}
+  \pgfmathsetmacro{\phiizRaw}{-(\ex*\siy - \ey*\six)}
+  \pgfmathsetmacro{\phiiLen}{sqrt(\phiixRaw*\phiixRaw + \phiiyRaw*\phiiyRaw + \phiizRaw*\phiizRaw)}
+  \pgfmathsetmacro{\phiix}{\phiixRaw/\phiiLen}
+  \pgfmathsetmacro{\phiiy}{\phiiyRaw/\phiiLen}
+  \pgfmathsetmacro{\phiiz}{\phiizRaw/\phiiLen}
+
+  % Compute \uvec{\beta}_0^i = \uvec{\phi}^i x \uvec{s}^i
+  \pgfmathsetmacro{\betaiix}{\phiiy*\siz - \phiiz*\siy}
+  \pgfmathsetmacro{\betaiiy}{\phiiz*\six - \phiix*\siz}
+  \pgfmathsetmacro{\betaiiz}{\phiix*\siy - \phiiy*\six}
+
+  % Draw Plane of Incidence
+  \coordinate (Iedge1) at ($(Qe) + 1.2*(\ex,\ey,\ez)$);
+  \coordinate (Iedge2) at ($(Qe) - 1.2*(\ex,\ey,\ez)$);
+  \coordinate (Iplane3) at ($(Iedge2) - 1.8*(\Ix,\Iy,\Iz)$);
+  \coordinate (Iplane4) at ($(Iedge1) - 1.8*(\Ix,\Iy,\Iz)$);
+
+  % Define Incident Ray Source
+  \path (Qe) -- ++({-\Ix},{-\Iy},{-\Iz}) coordinate (Tx);
+  \draw[->,thick] (Tx) -- (Qe) node[midway,sloped,above] {$\bsup{s}^i$};
+
+  % Draw Incident Coordinate Vectors at Tx
+  \draw[->,thick] (Tx) -- ++($0.8*(\phiix,\phiiy,\phiiz)$) node[below] {$\uvec{\phi}^i$};
+  \draw[->,thick] (Tx) -- ++($0.8*(\betaiix,\betaiiy,\betaiiz)$) node[above right] {$\uvec{\beta}_0^i$};
+
+  % 4. Compute Keller's cone angle parameter (cos(beta_0))
+  \pgfmathsetmacro{\cosbeta}{abs((\Ix*\Ex + \Iy*\Ey + \Iz*\Ez)/(\Ilen*\Elen))}
+  \pgfmathsetmacro{\sinbeta}{sqrt(1 - \cosbeta*\cosbeta)}
+
+  % ==========================================
+  % DRAWING THE DIFFRACTION CONE & PLANE
+  % ==========================================
+
+  % Set rotated coordinate system at Qe pointing along the edge
+  \tdplotsetrotatedcoords{\Ephi}{\Etheta}{0}
+  \tdplotsetrotatedcoordsorigin{(Qe)}
+
+  \begin{scope}[tdplot_rotated_coords]
+
+    % Compute position P on the cone with exact unit radius (|s^d| = 1)
+    \pgfmathsetmacro{\Pang}{30} % Adjusted angle to put P nicely on the top-right of the forward cone
+    \pgfmathsetmacro{\Px}{3 * \sinbeta * cos(\Pang)}
+    \pgfmathsetmacro{\Py}{3 * \sinbeta * sin(\Pang)}
+    \pgfmathsetmacro{\Pz}{3 * \cosbeta}
+
+    % Draw Plane of Diffraction BEFORE the ray so the ray sits on top
+    \coordinate (Dedge1) at (0,0,1.2);
+    \coordinate (Dedge2) at (0,0,-1.2);
+    \coordinate (Dplane3) at ($(Dedge2) + 3.5*({\sinbeta*cos(\Pang)}, {\sinbeta*sin(\Pang)}, {\cosbeta})$);
+    \coordinate (Dplane4) at ($(Dedge1) + 3.5*({\sinbeta*cos(\Pang)}, {\sinbeta*sin(\Pang)}, {\cosbeta})$);
+
+    \coordinate (P) at (\Px, \Py, \Pz);
+
+    % Draw the specific observation ray s^d
+    \draw[->,thick] (0,0,0) -- (P) node[pos=.6,sloped,below] {$\bsup{s}^d$};
+
+    % Draw Diffracted Coordinate Vectors at P
+    % In this rotated frame, \uvec{e} is simply (0,0,1) and \uvec{s}^d is clearly defined.
+    % \uvec{\phi}^d = (-sin(Pang), cos(Pang), 0)
+    \draw[->, thick] (P) -- ++($0.8*({-sin(\Pang)}, {cos(\Pang)}, 0)$) node[above left] {$\uvec{\phi}^d$};
+    % \uvec{\beta}_0^d = \uvec{\phi}^d x \uvec{s}^d = (cos(beta)*cos(Pang), cos(beta)*sin(Pang), -sin(beta))
+    \draw[->, thick] (P) -- ++($0.8*({\cosbeta*cos(\Pang)}, {\cosbeta*sin(\Pang)}, {-\sinbeta})$) node[right] {$\uvec{\beta}_0^d$};
+
+  \end{scope}
+
+\end{tikzpicture}

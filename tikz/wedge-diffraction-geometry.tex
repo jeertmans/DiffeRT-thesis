@@ -1,0 +1,52 @@
+% Requires:
+% \usepackage{amsmath}
+% \usepackage{siunitx}
+% \usetikzlibrary{calc}
+% \usetikzlibrary{decorations.pathmorphing}
+% \usetikzlibrary{patterns}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\glsxtrshort}[1]{#1}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\hat{\mathbf{#1}}}
+\begin{tikzpicture}[scale=2.0]
+  % Origin (tip of wedge)
+  \coordinate (O) at (0,0);
+
+  % Wedge geometry
+  % Face 0 along positive x-axis
+  \coordinate (F0) at (2,0);
+  % Face n
+  \def\wedgeAngle{320} % n\pi exterior angle, so interior is 60. n = 300/180 = 5/3
+  \coordinate (Fn) at ({2*cos(\wedgeAngle)}, {2*sin(\wedgeAngle)});
+
+  \def\rprime{2.0}
+  \def\phiprime{60}
+  \node[cross out,thick,draw,inner sep=2pt,label=above:{Source}] (Tx) at ({\rprime*cos(\phiprime)}, {\rprime*sin(\phiprime)}) {};
+  \coordinate (rsb) at ({-.9*\rprime*cos(\phiprime)}, {+0.9*\rprime*sin(\phiprime)});
+  \coordinate (isb) at ({0.9*\rprime*cos(\phiprime + 180)}, {0.9*\rprime*sin(\phiprime + 180)});
+
+  % Fill wedge interior
+  \pgfmathsetseed{3} % For reproducible randomness
+  \fill[pattern=north east lines,draw,thick] (F0) -- (O) -- (Fn) decorate[decoration={random steps,segment length=2mm,amplitude=1mm}] { -- (F0 |- Fn) -- cycle};
+
+  \draw[thick,dashed] (O) -- (isb) node[pos=.65,align=center,text opacity=0.5,sloped,font=\footnotesize] {transition\\region} node[sloped,left,rotate=\phiprime] {\glsxtrshort{isb}};
+  \draw[thick,dashed] (O) -- (rsb) node[pos=.65,align=center,text opacity=0.5,sloped,font=\footnotesize] {transition\\region} node[rotate=-\phiprime,left] {\glsxtrshort{rsb}};
+
+  \node[draw=black,fill=white,circle,inner sep=3pt] (On) at (O) {};
+  \fill[black] (O) circle (1pt);
+  \node[below=3pt] at (On) {$\uvec{e}$};
+  \node[left] at (On.south west) {$\bsup{x}_e$};
+
+  % Source and Transmitter
+  \draw[thick, ->] (Tx) -- (On) node[midway, above] {$\bsup{s}^i$};
+
+  % Receiver
+  \def\r{2.0}
+  \def\aphi{150}
+  \node[cross out,thick,draw,inner sep=2pt,label=above:{$\bsup{P}$}] (Rx) at ({\r*cos(\aphi)}, {\r*sin(\aphi)}) {};
+  \draw[thick, ->] (On) -- (Rx) node[midway, below left] {$\bsup{s}^d$};
+
+  \node at (0, 1.5) {Region I};
+  \node at (-1.4, 0) {Region II};
+  \node at (0, -1.5) {Region III};
+\end{tikzpicture}

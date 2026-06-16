@@ -1,0 +1,67 @@
+% No specific requirements
+\begin{tikzpicture}[scale=1, >=triangle 45]
+  \node at (5, 8.5) [font=\large\bfseries] {Generative Flow Network: Path Decision Tree};
+  \node at (5, 8) [font=\small] {Nodes = Surfaces/Edges, Edges = Bounce Probabilities};
+
+  % Root (transmitter)
+  \node[circle, fill=red!70, draw, thick] at (5, 6.5) {Source};
+
+  % Level 1: First bounce candidates
+  \node[circle, fill=yellow!70, draw, thick] at (1.5, 4.5) {Surface 1};
+  \node[circle, fill=yellow!70, draw, thick] at (5, 4.5) {Surface 2};
+  \node[circle, fill=yellow!70, draw, thick] at (8.5, 4.5) {Surface 3};
+
+  % Edge probabilities for level 1
+  \draw[->, thick, blue] (5, 6.5) -- (1.5, 4.5);
+  \node at (2.8, 5.8) [font=\small, blue] {0.15};
+
+  \draw[->, very thick, blue] (5, 6.5) -- (5, 4.5);
+  \node at (5.5, 5.5) [font=\small, blue] {0.70};
+
+  \draw[->, dashed, gray, thick] (5, 6.5) -- (8.5, 4.5);
+  \node at (7, 5.8) [font=\small, gray] {0.15};
+
+  % Level 2: Second bounce
+  % From Surface 1
+  \node[circle, fill=orange!60, draw] at (0.5, 2.5) {Edge A};
+  \node[circle, fill=orange!60, draw] at (2.5, 2.5) {Face B};
+
+  \draw[->, dashed, gray, thin] (1.5, 4.5) -- (0.5, 2.5);
+  \draw[->, dashed, gray, thin] (1.5, 4.5) -- (2.5, 2.5);
+
+  % From Surface 2 (thick lines = high probability)
+  \node[circle, fill=orange!60, draw] at (4, 2.5) {Edge C};
+  \node[circle, fill=orange!60, draw] at (6, 2.5) {Face D};
+
+  \draw[->, very thick, blue] (5, 4.5) -- (4, 2.5);
+  \node at (4.2, 3.5) [font=\small, blue] {0.45};
+
+  \draw[->, very thick, blue] (5, 4.5) -- (6, 2.5);
+  \node at (5.8, 3.5) [font=\small, blue] {0.55};
+
+  % From Surface 3 (some paths blocked by action masking)
+  \node[circle, fill=orange!60, draw] at (8, 2.5) {Face E};
+  \node[circle, color=red, draw, dashed, double, thick] at (9, 2.5) {Masked};
+
+  \draw[->, thick, blue] (8.5, 4.5) -- (8, 2.5);
+  \draw[->, dashed, red, very thick] (8.5, 4.5) -- (9, 2.5);
+  \node at (8.8, 3.3) [font=\small, red] {Blocked};
+
+  % Final path to receiver (highlighted)
+  \node[circle, fill=blue!70, draw, thick] at (4, 0.5) {Receiver};
+
+  \draw[->, very thick, green!60!black, line width=3pt] (4, 2.5) -- (4, 0.5);
+  \node at (3.2, 1.5) [font=\bfseries, green!60!black] {High-prob.};
+  \node at (3.2, 1) [font=\bfseries, green!60!black] {Path};
+
+  \draw[->, dashed, gray, thin] (6, 2.5) -- (4.5, 0.5);
+
+  % Legend and interpretation
+  \draw[thick, rounded corners] (0.1, -2.5) rectangle (9.9, -1.5);
+  \node[align=center, font=\small, anchor=north west] at (0.3, -1.7) {
+    \textbf{Interpretation:} \\
+    $\bullet$ \textbf{Thick blue edges} = high probability paths \\
+    $\bullet$ \textbf{Dashed gray edges} = low probability or masked invalid paths \\
+    $\bullet$ \textbf{Green thick path} = sampled high-probability valid path for exact evaluation
+  };
+\end{tikzpicture}

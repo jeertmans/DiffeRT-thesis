@@ -1,0 +1,82 @@
+% See: https://www.overleaf.com/learn/latex/Nomenclatures
+\renewcommand\nomgroup[1]{%
+\item[\bfseries
+    \ifstrequal{#1}{C}{Physics constants}{%
+      \ifstrequal{#1}{N}{Notation}{%
+    \ifstrequal{#1}{S}{Special symbols}{}}}%
+]}
+
+\newcommand{\nomnote}[1]{%
+\renewcommand{\nomentryend}{\hspace*{\fill}#1}}
+\newcommand{\nomunit}{\nomnote}
+
+% Constants
+\nomenclature[C,001]{$c$}{Speed of light in a vacuum\nomunit{\qty{299792458}{\meter\per\second}}}
+\nomenclature[C,002]{$\epsilon_0$}{Vacuum permittivity\nomunit{\qty{8.8541878188e-12}{\farad\per\meter}}}
+\nomenclature[C,003]{$\mu_0$}{Vacuum permeability\nomunit{\qty{4\pi e-7}{\henry\per\meter}}}
+\nomenclature[C,004]{$Z$}{Intrinsic impedance of a medium\nomunit{\unit{\ohm}}}
+\nomenclature[C,005]{$Z_0$}{Free-space impedance\nomunit{\qty{376.730313412}{\ohm}}}
+
+% General notations
+\nomenclature[N,001]{$a$, $A$}{Scalar quantity\nomnote{italic lowercase or uppercase letter}}
+\nomenclature[N,002]{$\bsit{a}$}{Vector quantity\nomnote{bold-italic lowercase letter}}
+\nomenclature[N,003]{$\bsit{A}$}{Matrix or tensor quantity\nomnote{bold-italic uppercase letter}}
+\nomenclature[N,004]{$\bsup{a}$, $\bsup{A}$}{2- or 3-dimensional vector\nomnote{bold lowercase or uppercase letter}}
+\nomenclature[N,005]{$\uvec{n}$}{Normal vector\nomnote{bold lowercase letter with hat}}
+\nomenclature[N,006]{$\dyadic{R}$}{Polarization dyadic ($2\times 2$ matrix)\nomnote{bold uppercase letter with underline}}
+\nomenclature[N,007]{$a_i$}{$i$-th scalar component of vector $\bsit{a}$}
+\nomenclature[N,008]{$\bsit{a}_{i}$}{$i$-th vector component of matrix $\bsit{A}$}
+\nomenclature[N,009]{$\bsit{a}_{i,j}$}{Indexed (row then column) scalar component of matrix $\bsit{A}$}
+\nomenclature[N,010]{$a^*$}{Complex conjugate (and transpose for matrices)}
+\nomenclature[N,011]{$a^\star$}{Solution to an optimization problem}
+\nomenclature[N,012]{$\|a\|$}{Euclidean or $\ell^2$-norm of vector $a$}
+\nomenclature[N,013]{$\bsit{\theta}^{(i)}$}{Vector of (model) parameters at iteration $i$}
+\nomenclature[N,014]{$\bar{x}$}{Average or mean value of $x$}
+\nomenclature[N,101]{$\cdot$}{Vector dot product}
+\nomenclature[N,102]{$\times$}{Vector cross product}
+\nomenclature[N,103]{$\nabla$}{Vector differential operator}
+\nomenclature[N,104]{$\nabla\cdot$}{Divergence operator}
+\nomenclature[N,105]{$\nabla\times$}{Curl operator}
+\nomenclature[N,106]{$\nabla^2$}{Laplacian operator}
+\nomenclature[N,107]{$\nabla\nabla$}{Hessian matrix operator}
+\nomenclature[N,108]{$\partial$}{Partial derivative operator}
+\nomenclature[N,201]{$\bsit{A}\bsit{b}$}{Matrix-vector product}
+\nomenclature[N,202]{$\bsit{A}\bsit{B}$}{Matrix-matrix product}
+\nomenclature[N,301]{$\mathcal{O}$}{Big O notation for algorithmic complexity}
+
+% Special symbols
+%% Math symbols (may be put in the N group?)
+\nomenclature[S,001]{$j$}{Imaginary unit}
+\nomenclature[S,002]{$\operatorname{Re}$}{Real part of a complex number}
+\nomenclature[S,003]{$\operatorname{Im}$}{Imaginary part of a complex number}
+%% Scalar quantities from Maxwell's equations
+\nomenclature[S,100]{$f$}{Frequency\nomunit{\unit{\hertz}}}
+\nomenclature[S,101]{$\tau$}{Delay\nomunit{\unit{\second}}}
+\nomenclature[S,102]{$\omega$}{Angular frequency\nomunit{\unit{\radian\per\second}}}
+\nomenclature[S,103]{$\theta$}{Polar angle, $\theta \in [0, \pi]$, measured from the local z-axis\nomunit{\unit{\radian}}}
+\nomenclature[S,104]{$\varphi$}{Azimuthal angle, $\varphi \in [0, 2\pi]$, measured from the local x-axis\nomunit{\unit{\radian}}}
+\nomenclature[S,105]{$\sigma$}{Surface conductivity\nomunit{\unit{\siemens}}}
+\nomenclature[S,106]{$\rho_v$}{Electric volume charge density\nomunit{\unit{\coulomb\per\meter\cubed}}}
+\nomenclature[S,107]{$\epsilon$}{Permittivity\nomunit{\unit{\farad\per\meter}}}
+\nomenclature[S,108]{$\epsilon_r$}{Relative Permittivity}
+\nomenclature[S,109]{$Z$}{Intrinsic impedance\nomunit{\unit{\ohm}}}
+\nomenclature[S,110]{$v$}{Phase velocity\nomunit{\unit{\meter\per\second}}}
+\nomenclature[S,111]{$\lambda$}{Wavelength\nomunit{\unit{\meter}}}
+\nomenclature[S,112]{$k$}{Wavenumber\nomunit{\unit{\radian\per\meter}}}
+\nomenclature[S,113]{$d_f$}{Fraunhofer distance\nomunit{\unit{\meter}}}
+%% Vector quantities from Maxwell's equations
+\nomenclature[S,201]{$\bsup{r}$}{Position vector\nomunit{\unit{\meter}}}
+\nomenclature[S,202]{$\bsup{\mathcal{E}}$}{Electric field (time domain)\nomunit{\unit{\volt\per\meter}}}
+\nomenclature[S,203]{$\bsup{E}$}{Electric field (phasor domain)\nomunit{\unit{\volt\per\meter}}}
+\nomenclature[S,204]{$\bsup{B}$}{Magnetic flux density\nomunit{\unit{\tesla}}}
+\nomenclature[S,205]{$\bsup{H}$}{Magnetic field strength\nomunit{\unit{\ampere\per\meter}}}
+\nomenclature[S,206]{$\bsup{D}$}{Electric displacement field\nomunit{\unit{\coulomb\per\square\meter}}}
+\nomenclature[S,207]{$\bsup{J}$}{Current density\nomunit{\unit{\ampere\per\square\meter}}}
+\nomenclature[S,208]{$\bsup{S}$}{Poynting vector\nomunit{\unit{\watt\per\square\meter}}}
+\nomenclature[S,209]{$\bsup{r}$}{Position vector\nomunit{\unit{\meter}}}
+%% GO and UTD quantities
+\nomenclature[S,300]{$\Psi$}{Eikonal (phase) function\nomunit{\unit{\meter}}}
+\nomenclature[S,301]{$\bsup{P}$}{Point of observation\nomunit{\unit{\meter}}}
+\nomenclature[S,302]{$\bsup{x}_r$}{Point of reflection on a surface\nomunit{\unit{\meter}}}
+\nomenclature[S,303]{$\bsup{x}_e$}{Point of diffraction on an edge\nomunit{\unit{\meter}}}
+\nomenclature[S,304]{$\rho_{1,2}$}{Principal radii of wavefront curvature\nomunit{\unit{\meter}}}

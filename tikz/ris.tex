@@ -1,0 +1,55 @@
+% Requires:
+% \usetikzlibrary{calc}
+\begin{tikzpicture}[scale=0.6,x={(1.2cm, 0.3cm)}, y={(0cm, 1.2cm)}]
+
+  % Define 3D depth shift (absolute canvas coordinates for consistent thickness)
+  \def\dx{-0.12cm}
+  \def\dy{0.15cm}
+
+  \clip
+  ([xshift=\dx, yshift=\dy] 0,0) -- (0,0) -- (4,0) -- (4,5) -- ([xshift=\dx, yshift=\dy] 4,5) -- ([xshift=\dx, yshift=\dy] 0,5) -- cycle;
+
+  \fill[fill=green!15!gray!20!white]
+  (0,0) -- (4,0) -- (4,5) -- (0,5) -- cycle;
+
+  % Vertical dashed lines
+  \foreach \i in {0.5, 1.5, 2.5, 3.5} {
+    \draw[thick, green!40!black, densely dashed] (\i, 0) -- (\i, 5);
+  }
+  % Horizontal dashed lines
+  \foreach \j in {0.5, 1.5, 2.5, 3.5, 4.5} {
+    \draw[thick, green!40!black, densely dashed] (0, \j) -- (4, \j);
+  }
+
+  \draw[thick, blue!70!black]
+  (0,0) -- (4,0) -- (4,5) -- (0,5) -- cycle;
+
+  % Left Face
+  \draw[thick, blue!70!black, fill=blue!5!white]
+  ([xshift=\dx, yshift=\dy] 0,0) -- (0,0) -- (0,5) -- ([xshift=\dx, yshift=\dy] 0,5) -- cycle;
+
+  % Top Face
+  \draw[thick, blue!70!black, fill=blue!5!white]
+  ([xshift=\dx, yshift=\dy] 0,5) -- (0,5) -- (4,5) -- ([xshift=\dx, yshift=\dy] 4,5) -- cycle;
+
+  % Command to draw a single 3D element at a given (x, y) intersection
+  \newcommand{\riselement}[2]{
+    \begin{scope}[shift={(#1,#2)}]
+      % Reset axes locally so the ellipses are drawn perfectly upright
+      \begin{scope}[x={(1cm,0cm)}, y={(0cm,1cm)}]
+        \def\ew{0.06}  % width (x-radius)
+        \def\eh{0.22}  % height (y-radius)
+
+        % Front face (yellow disc)
+        \draw[thick, blue!70!black, fill=yellow!60!white] (0,0) ellipse ({\ew} and {\eh});
+      \end{scope}
+    \end{scope}
+  }
+
+  % Loop to place elements at all intersections (4 columns, 5 rows)
+  \foreach \i in {0.5, 1.5, 2.5, 3.5} {
+    \foreach \j in {0.5, 1.5, 2.5, 3.5, 4.5} {
+      \riselement{\i}{\j}
+    }
+  }
+\end{tikzpicture}

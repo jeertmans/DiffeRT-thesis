@@ -1,0 +1,37 @@
+% Requires:
+% \usepackage{pgfplots}
+% \usepackage{pgfplotstable}
+% \usepackage{siunitx}
+% \pgfplotsset{compat=1.18}
+% \providecommand{\glsxtrshort}[1]{#1}
+% INCLUDE ../data/keller-fields-fig-4-11.txt relto ../main.tex
+\begin{tikzpicture}
+  \begin{axis}[
+      width=8cm,
+      xlabel={Observation angle $\phi^d$ (\unit{\degree})},
+      ylabel={$E_z$ (\unit{\decibel})},
+      xmin=0, xmax=320,
+      ymin=-40, ymax=20,
+      xtick={0, 40, 80, 120, 160, 200, 240, 280, 320},
+      ytick={-40, -30, -20, -10, 0, 10, 20},
+      restrict y to domain=-100:100,
+    ]
+
+    \draw[thick,dashed,draw=gray,draw opacity=0.5] (axis cs:125,-40) -- (axis cs:125,20) node[sloped,pos=.17,align=center] {\glsxtrshort{rsb}\\[.5em]$\phi^d+\phi^i=\pi$};
+    \draw[thick,dashed,draw=gray,draw opacity=0.5] (axis cs:235,-40) -- (axis cs:235,20) node[sloped,pos=.17,align=center] {\glsxtrshort{isb}\\[.5em]$\phi^d-\phi^i=\pi$};
+
+    \node[align=center] at (axis cs:62.5, 12) {Region I\\\footnotesize $E^t = E^i + E^r + E^d$};
+
+    \node[align=center] at (axis cs:180, 12) {Region II\\\footnotesize $E^t = E^i + E^d$};
+
+    \node[align=center] at (axis cs:278.5, 12) {Region III\\\footnotesize $E^t = E^d$};
+
+    \addplot[solid, semithick] table[x=phi, y=Etot_dB, col sep=comma] {data/keller-fields-fig-4-11.txt};
+
+    \addplot[dashed, semithick] table[x=phi, y=Ed_dB, col sep=comma] {data/keller-fields-fig-4-11.txt};
+
+    \node at (axis cs:180, -5) {$E^t$};
+    \node at (axis cs:180, -23) {$E^d$};
+
+  \end{axis}
+\end{tikzpicture}

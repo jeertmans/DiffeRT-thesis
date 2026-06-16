@@ -1,0 +1,35 @@
+% Requires:
+% \usepackage{amsmath}
+% \usetikzlibrary{patterns}
+% \usetikzlibrary{shapes.misc}
+% \providecommand{\bsup}[1]{\mathbf{#1}}
+% \providecommand{\uvec}[1]{\hat{\mathbf{#1}}}
+\begin{tikzpicture}
+  \tikzset{point/.style={draw,circle,thick,inner sep=2pt}}
+  \tikzset{tx/.style={point,cross out}}
+  \begin{scope}[local bounding box=main]
+    \node[tx,label={[anchor=north,yshift=-0.2cm,xshift=-0.2cm,inner sep=0pt]Source}] (TX) at (-0.8,-.5) {};
+    \draw[thick,->] (TX) -- (-0.1,.5) node[pos=.5,above,sloped] {$\bsup{s}^i$};
+    \draw[thick,->] (-0.05,.5) -- +(0,-1) node[below] {$\uvec{n}$};
+
+    \draw[thick,pattern=north east lines, pattern color=black] (-1,.5) {}
+    -- ++(1,0) node[pos=-.2,below] {$s_1$} {}
+    -- ++(-1,1) node[midway,above,sloped] {$s_2$} {}
+    -- cycle node[midway,left] {$s_3$};
+
+    \filldraw[thick,pattern=north east lines, pattern color=black] (2,-.5) {}
+    -- ++(1.5,0) node[midway,below] {$s_4$} {}
+    -- ++(0,1.5) node[midway,right] {$s_5$} {}
+    -- cycle node[midway,above,sloped] {$s_6$};
+
+    \filldraw[thick,pattern=north east lines, pattern color=black] (2,2) {}
+    -- ++(-{sqrt(1.5/2)},+{sqrt(1.5/2)}) node[midway,above,sloped] {$s_7$} {}
+    -- ++(0,-1.5) node[midway,left] {$s_8$} {}
+    -- cycle node[midway,below,sloped] {$s_9$};
+  \end{scope}
+  \node at (main.north west) [below right,font=\scriptsize,align=center] {Unreachable\\half-space};
+  \fill[white,opacity=0.5] (main.north west) rectangle (main.south east |- 0,.515);
+  \fill[pattern=crosshatch, pattern color=black!10,opacity=0.25] (main.north west) rectangle (main.south east |- 0,.515);
+  \draw[thick,dashed,gray,opacity=0.5] (main.south west |- 0,.5) -- (main.south east |- 0,.5);
+  \node at (main.north west) [below right,font=\scriptsize,align=center] {Unreachable\\half-space};
+\end{tikzpicture}
