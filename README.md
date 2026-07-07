@@ -10,8 +10,6 @@ This repository contains the LaTeX source files and Python scripts for the Ph.D.
 
 </div>
 
-
-
 ### Abstract
 
 Wireless communications are the foundation of modern technologies, such as smartphones, Wi-Fi networks, connected vehicles, and future infrastructures. The design of these technologies relies on accurate models predicting radio wave propagation in complex environments shaped by obstacles, reflections, diffraction, and interference.
@@ -56,15 +54,15 @@ If you wish to cite this manuscript, please use the following BibTeX entry:
 @phdthesis{Eertmans2026Thesis,
   author = {Eertmans, Jérome},
   title  = {Differentiable Ray Tracing for Radio Propagation Modeling},
-  school = {École polytechnique de Louvain, Université catholique de Louvain},
+  school = {École polytechnique de Louvain, UCLouvain},
   year   = {2026},
   month  = {July},
-  url    = {https://hdl.handle.net/TODO}
+  url    = {https://hdl.handle.net/2078.5/278727}
 }
 ```
 
 [download-badge]: https://img.shields.io/badge/PDF-Download%20Book-blue
 [download-url]: https://raw.githubusercontent.com/jeertmans/DiffeRT-thesis/refs/heads/build/jerome-eertmans-phd-thesis.pdf
 [action-badge]: https://github.com/jeertmans/DiffeRT-thesis/actions/workflows/book.yml/badge.svg
-[handle-badge]: https://img.shields.io/badge/https%3A%2F%2Fhdl.handle.net%2FTODO-AF2D29
-[handle-url]: https://hdl.handle.net/TODO
+[handle-badge]: https://img.shields.io/badge/https%3A%2F%2Fhdl.handle.net%2F2078.5%2F278727-AF2D29
+[handle-url]: https://hdl.handle.net/2078.5/278727
